@@ -1,0 +1,11 @@
+.DS_Store
+.swiftpm/
+.build/
+DerivedData/
+xcuserdata/
+.cursor/
+*.xcuserstate
+Pods/
+Podfile.lock
+*.log
+.idea/
