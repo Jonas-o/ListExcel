@@ -8,10 +8,10 @@
 import UIKit
 
 extension Excel {
-    public class TextCell: Cell {
+    open class TextCell: Cell {
         public let textLabel = DecimalLabel()
 
-        public override func initSubviews() {
+        open override func initSubviews() {
             super.initSubviews()
             textLabel.resetAppearance()
             textLabel.setDecimal([])
@@ -19,19 +19,19 @@ extension Excel {
             contentView.addSubview(textLabel)
         }
 
-        public override func applyAppearance() {
+        open override func applyAppearance() {
             super.applyAppearance()
             textLabel.textColor = appearance.textColor
             textLabel.warnTextColor = appearance.warnTextColor
             textLabel.font = appearance.font
         }
 
-        public override func bindContent(_ content: Content?, context: ContentBindContext = .init()) {
+        open override func bindContent(_ content: Content?, context: ContentBindContext = .init()) {
             switch content {
             case let .decimal(decimal, style, hiddenZero):
-                textLabel.setDecimal([.init(decimal, style: style, hiddenZero: hiddenZero)])
+                textLabel.setDecimal([.init(decimal, style: style, hiddenZero: hiddenZero)], locale: appearance.locale)
             case let .decimals(decimals):
-                textLabel.setDecimal(decimals)
+                textLabel.setDecimal(decimals, locale: appearance.locale)
                 textLabel.numberOfLines = max(decimals.count, 1)
             case let .text(text):
                 textLabel.text = text
@@ -43,7 +43,7 @@ extension Excel {
             }
         }
 
-        public override func layoutSubviews() {
+        open override func layoutSubviews() {
             super.layoutSubviews()
             textLabel.frame = contentView.bounds.inset(by: padding)
         }
@@ -92,7 +92,7 @@ extension Excel {
                 textLabel.text = text
                 applyCorners(leading: leadingCorner, trailing: trailingCorner)
             case let .cornerDecimal(decimal, style, leadingCorner, trailingCorner):
-                textLabel.setDecimal([.init(decimal, style: style)])
+                textLabel.setDecimal([.init(decimal, style: style)], locale: appearance.locale)
                 applyCorners(leading: leadingCorner, trailing: trailingCorner)
             default:
                 return
@@ -105,11 +105,11 @@ extension Excel {
         private func applyCorners(leading: Content.Tuple?, trailing: Content.Tuple?) {
             if let leading {
                 leadingCornerLabel.isHidden = false
-                leadingCornerLabel.setDecimal([leading])
+                leadingCornerLabel.setDecimal([leading], locale: appearance.locale)
             }
             if let trailing {
                 trailingCornerLabel.isHidden = false
-                trailingCornerLabel.setDecimal([trailing])
+                trailingCornerLabel.setDecimal([trailing], locale: appearance.locale)
             }
         }
 

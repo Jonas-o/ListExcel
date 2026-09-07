@@ -177,11 +177,11 @@ extension Excel {
             trailingCornerLabel.isHidden = true
             if let leadingCorner {
                 leadingCornerLabel.isHidden = false
-                leadingCornerLabel.setDecimal([leadingCorner])
+                leadingCornerLabel.setDecimal([leadingCorner], locale: appearance.locale)
             }
             if let trailingCorner {
                 trailingCornerLabel.isHidden = false
-                trailingCornerLabel.setDecimal([trailingCorner])
+                trailingCornerLabel.setDecimal([trailingCorner], locale: appearance.locale)
             }
             if let alignment = context.textAlignment {
                 textField.textAlignment = alignment

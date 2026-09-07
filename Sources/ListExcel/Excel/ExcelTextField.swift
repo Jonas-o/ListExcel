@@ -42,7 +42,7 @@ public class ExcelTextField: UITextField, ExcelTextInput {
         keyboardType = .default
         textAlignment = .center
         font = .default
-        textColor = .lightGreen
+        textColor = .softGreen
         removeTarget(nil, action: nil, for: .allEditingEvents)
         borderStyle = .none
     }

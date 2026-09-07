@@ -23,19 +23,19 @@ public enum WarnLabel {
 
 public class DecimalLabel: UILabel {
     public enum NumberStyle {
+        /// 无分组纯数字（locale 小数点；最多 4 位小数）
         case none
-        case decimal
-        case currency
-        case percent
+        /// 分组小数；`nil` → 默认 2 位
+        case decimal(fractionDigits: Int?)
+        /// 货币；`code == nil` → locale 默认货币
+        case currency(code: String?)
+        /// 百分比（Decimal 为比率，如 0.15 → 15%）；`nil` → 默认 2 位
+        case percent(fractionDigits: Int?)
+        case custom((Decimal, Locale) -> String)
 
-        public func string(with decimal: Decimal?) -> String? {
-            switch self {
-            case .none: return decimal?.stringValue
-            case .decimal: return decimal?.priceValue
-            case .currency: return decimal?.priceValueForRMB
-            case .percent: return decimal?.percentString
-            }
-        }
+        public static var decimal: NumberStyle { .decimal(fractionDigits: nil) }
+        public static var currency: NumberStyle { .currency(code: nil) }
+        public static var percent: NumberStyle { .percent(fractionDigits: nil) }
     }
 
     public struct DecimalTuple {
@@ -49,9 +49,9 @@ public class DecimalLabel: UILabel {
             self.hiddenZero = hiddenZero
         }
 
-        public var text: String {
+        public func text(locale: Locale) -> String {
             if hiddenZero, decimal == 0 { return "" }
-            return style.string(with: decimal) ?? ""
+            return decimal?.formatted(style, locale: locale) ?? ""
         }
     }
 
@@ -63,6 +63,7 @@ public class DecimalLabel: UILabel {
         didSet { resetTextColor() }
     }
     private var decimals: [DecimalTuple] = []
+    private var formatLocale: Locale = .current
 
     public override init(frame: CGRect) {
         super.init(frame: frame)
@@ -72,9 +73,10 @@ public class DecimalLabel: UILabel {
         super.init(coder: coder)
     }
 
-    public func setDecimal(_ decimals: [DecimalTuple]) {
+    public func setDecimal(_ decimals: [DecimalTuple], locale: Locale = .current) {
         self.decimals = decimals
-        text = decimals.isEmpty ? nil : decimals.map(\.text).joined(separator: "\n")
+        formatLocale = locale
+        text = decimals.isEmpty ? nil : decimals.map { $0.text(locale: locale) }.joined(separator: "\n")
         resetTextColor()
     }
 
@@ -89,11 +91,11 @@ public class DecimalLabel: UILabel {
             super.textColor = color
             return
         }
-        let joined = decimals.map(\.text).joined(separator: "\n")
+        let joined = decimals.map { $0.text(locale: formatLocale) }.joined(separator: "\n")
         let att = NSMutableAttributedString(string: joined)
         var location = 0
         for tuple in decimals {
-            let text = tuple.text
+            let text = tuple.text(locale: formatLocale)
             if let decimal = tuple.decimal,
                (warnStyle.contains(.negative) && decimal < 0) || (warnStyle.contains(.zero) && decimal == 0) {
                 att.addAttribute(.foregroundColor, value: warnTextColor, range: NSRange(location: location, length: text.count))

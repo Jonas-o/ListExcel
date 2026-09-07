@@ -21,6 +21,7 @@ extension ListExcelView {
         let pointSize: CGFloat
         let paddingHorizontal: CGFloat
         let cellMargin: CGFloat
+        let localeIdentifier: String
     }
 
     public enum ColumnWidthPolicy {
@@ -75,43 +76,38 @@ extension ListExcelView {
     func contentWidthKey(for content: Excel.Content?, font: UIFont) -> ContentWidthKey? {
         guard let content else { return nil }
         let excel = configuration.excel
+        let locale = excel.locale
+        let localeIdentifier = locale.identifier
         let padding = excel.cellPadding.horizontalValue
         let margin = excel.cellMargin
         let fontName = font.fontName
         let size = font.pointSize
 
+        func key(kind: String, payload: String) -> ContentWidthKey {
+            ContentWidthKey(
+                kind: kind,
+                payload: payload,
+                fontName: fontName,
+                pointSize: size,
+                paddingHorizontal: padding,
+                cellMargin: margin,
+                localeIdentifier: localeIdentifier
+            )
+        }
+
         switch content {
             case .select, .image:
                 return nil
             case let .text(text):
-                return ContentWidthKey(
-                    kind: "text",
-                    payload: text ?? "",
-                    fontName: fontName,
-                    pointSize: size,
-                    paddingHorizontal: padding,
-                    cellMargin: margin
-                )
+                return key(kind: "text", payload: text ?? "")
             case let .decimal(decimal, style, hiddenZero):
-                let text = DecimalLabel.DecimalTuple(decimal, style: style, hiddenZero: hiddenZero).text
-                return ContentWidthKey(
-                    kind: "decimal",
-                    payload: "\(text)|\(String(describing: style))|\(hiddenZero)",
-                    fontName: fontName,
-                    pointSize: size,
-                    paddingHorizontal: padding,
-                    cellMargin: margin
-                )
+                let text = DecimalLabel.DecimalTuple(decimal, style: style, hiddenZero: hiddenZero).text(locale: locale)
+                return key(kind: "decimal", payload: "\(text)|\(styleToken(style))|\(hiddenZero)")
             case let .decimals(values):
-                let payload = values.map { "\($0.text)|\(String(describing: $0.style))|\($0.hiddenZero)" }.joined(separator: ";")
-                return ContentWidthKey(
-                    kind: "decimals",
-                    payload: payload,
-                    fontName: fontName,
-                    pointSize: size,
-                    paddingHorizontal: padding,
-                    cellMargin: margin
-                )
+                let payload = values.map {
+                    "\($0.text(locale: locale))|\(styleToken($0.style))|\($0.hiddenZero)"
+                }.joined(separator: ";")
+                return key(kind: "decimals", payload: payload)
             case let .iconText(style, text):
                 let styleToken: String
                 switch style {
@@ -120,51 +116,35 @@ extension ListExcelView {
                     case let .custom(image):
                         styleToken = "custom:\(image.size.width)x\(image.size.height)"
                 }
-                return ContentWidthKey(
-                    kind: "iconText",
-                    payload: "\(styleToken)|\(text ?? "")",
-                    fontName: fontName,
-                    pointSize: size,
-                    paddingHorizontal: padding,
-                    cellMargin: margin
-                )
+                return key(kind: "iconText", payload: "\(styleToken)|\(text ?? "")")
             case let .textField(text):
-                return ContentWidthKey(
-                    kind: "textField",
-                    payload: text ?? "",
-                    fontName: fontName,
-                    pointSize: size,
-                    paddingHorizontal: padding,
-                    cellMargin: margin
-                )
+                return key(kind: "textField", payload: text ?? "")
             case let .cornerText(text, leading, trailing):
-                return ContentWidthKey(
+                return key(
                     kind: "cornerText",
-                    payload: "\(text ?? "")|\(leading?.text ?? "")|\(trailing?.text ?? "")",
-                    fontName: fontName,
-                    pointSize: size,
-                    paddingHorizontal: padding,
-                    cellMargin: margin
+                    payload: "\(text ?? "")|\(leading?.text(locale: locale) ?? "")|\(trailing?.text(locale: locale) ?? "")"
                 )
             case let .cornerDecimal(decimal, style, leading, trailing):
-                let text = style.string(with: decimal) ?? ""
-                return ContentWidthKey(
+                let text = decimal?.formatted(style, locale: locale) ?? ""
+                return key(
                     kind: "cornerDecimal",
-                    payload: "\(text)|\(String(describing: style))|\(leading?.text ?? "")|\(trailing?.text ?? "")",
-                    fontName: fontName,
-                    pointSize: size,
-                    paddingHorizontal: padding,
-                    cellMargin: margin
+                    payload: "\(text)|\(styleToken(style))|\(leading?.text(locale: locale) ?? "")|\(trailing?.text(locale: locale) ?? "")"
                 )
             case let .cornerTextField(text, leading, trailing):
-                return ContentWidthKey(
+                return key(
                     kind: "cornerTextField",
-                    payload: "\(text ?? "")|\(leading?.text ?? "")|\(trailing?.text ?? "")",
-                    fontName: fontName,
-                    pointSize: size,
-                    paddingHorizontal: padding,
-                    cellMargin: margin
+                    payload: "\(text ?? "")|\(leading?.text(locale: locale) ?? "")|\(trailing?.text(locale: locale) ?? "")"
                 )
+        }
+    }
+
+    private func styleToken(_ style: DecimalLabel.NumberStyle) -> String {
+        switch style {
+            case .none: return "none"
+            case let .decimal(digits): return "decimal:\(digits.map(String.init) ?? "default")"
+            case let .currency(code): return "currency:\(code ?? "locale")"
+            case let .percent(digits): return "percent:\(digits.map(String.init) ?? "default")"
+            case .custom: return "custom"
         }
     }
 

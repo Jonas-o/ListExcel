@@ -16,15 +16,15 @@ final class ListExcelExcelBridge<T: Excel.Header>: NSObject, ExcelDelegate {
         super.init()
     }
 
-    var numberOfRows: Int { owner.numberOfRows }
-    var numberOfColumns: Int { owner.numberOfColumns }
-    var leadingLockCount: Int { owner.leadingLockCount }
-    var trailingLockCount: Int { owner.trailingLockCount }
-    var headerHeight: CGFloat { owner.headerHeight }
-    var footerHeight: CGFloat { owner.footerHeight }
-    var rowHeight: CGFloat { owner.rowHeight }
+    func numberOfRows(in excel: Excel) -> Int {
+        owner.numberOfRows
+    }
 
-    func excel(_ excel: Excel, columnWidthAt column: Int) -> CGFloat? {
+    func numberOfColumns(in excel: Excel) -> Int {
+        owner.numberOfColumns
+    }
+
+    func excel(_ excel: Excel, columnWidthAt column: Int) -> CGFloat {
         owner.excel(excel, columnWidthAt: column)
     }
 
@@ -52,7 +52,7 @@ final class ListExcelExcelBridge<T: Excel.Header>: NSObject, ExcelDelegate {
         owner.excel(excel, didSelectFooterAt: column)
     }
 
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        owner.scrollViewDidScroll(scrollView)
+    func excel(_ excel: Excel, scrollViewDidScroll scrollView: UIScrollView) {
+        owner.handleExcelScrollViewDidScroll(scrollView)
     }
 }

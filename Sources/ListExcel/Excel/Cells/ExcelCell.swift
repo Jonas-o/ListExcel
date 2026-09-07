@@ -47,7 +47,7 @@ extension Excel.Cell {
 }
 
 extension Excel {
-    public class Cell: UICollectionViewCell {
+    open class Cell: UICollectionViewCell {
         public override init(frame: CGRect) {
             super.init(frame: frame)
             initSubviews()
@@ -67,9 +67,12 @@ extension Excel {
             initSubviews()
         }
 
-        public override func layoutSubviews() {
+        open override func layoutSubviews() {
             super.layoutSubviews()
             highlightedView?.frame = contentView.bounds
+            if showLineLayer {
+                contentView.lex_refreshBorderLayers()
+            }
         }
 
         /// 由 Excel 在 `handle` 前注入
@@ -80,7 +83,8 @@ extension Excel {
 
         public var showLineLayer = false {
             didSet {
-                contentView.lex_borderPosition = showLineLayer ? [.left, .right] : []
+                // 只画右边线，避免相邻 cell 左右各一条叠成「双竖线」
+                contentView.lex_borderPosition = showLineLayer ? [.right] : []
             }
         }
 

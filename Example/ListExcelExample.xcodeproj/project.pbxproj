@@ -1,0 +1,442 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 60;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10000000000000000000001 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* AppDelegate.swift */; };
+		A10000000000000000000002 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* SceneDelegate.swift */; };
+		A10000000000000000000003 /* DemoCatalogViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* DemoCatalogViewController.swift */; };
+		A10000000000000000000004 /* DemoSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000004 /* DemoSupport.swift */; };
+		A10000000000000000000005 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* Assets.xcassets */; };
+		A10000000000000000000006 /* ListExcel in Frameworks */ = {isa = PBXBuildFile; productRef = A50000000000000000000001 /* ListExcel */; };
+		A10000000000000000000008 /* OrdersDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000008 /* OrdersDemoViewController.swift */; };
+		A10000000000000000000009 /* DualLockDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000009 /* DualLockDemoViewController.swift */; };
+		A1000000000000000000000A /* EditableDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000A /* EditableDemoViewController.swift */; };
+		A1000000000000000000000B /* MediaDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000B /* MediaDemoViewController.swift */; };
+		A1000000000000000000000C /* MutationLabViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000C /* MutationLabViewController.swift */; };
+		A1000000000000000000000D /* ContentGalleryDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000D /* ContentGalleryDemoViewController.swift */; };
+		A1000000000000000000000E /* SelectionTypesDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000E /* SelectionTypesDemoViewController.swift */; };
+		A1000000000000000000000F /* DelegateFallbackDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000000000000000000000F /* DelegateFallbackDemoViewController.swift */; };
+		A10000000000000000000010 /* LocalRefreshDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000010 /* LocalRefreshDemoViewController.swift */; };
+		A10000000000000000000011 /* OrphanRowsDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000011 /* OrphanRowsDemoViewController.swift */; };
+		A10000000000000000000012 /* ConfigChromeDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000012 /* ConfigChromeDemoViewController.swift */; };
+		A10000000000000000000013 /* CustomCellDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000013 /* CustomCellDemoViewController.swift */; };
+		A10000000000000000000014 /* PureExcelDemoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000014 /* PureExcelDemoViewController.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A20000000000000000000001 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		A20000000000000000000002 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
+		A20000000000000000000003 /* DemoCatalogViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoCatalogViewController.swift; sourceTree = "<group>"; };
+		A20000000000000000000004 /* DemoSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DemoSupport.swift; sourceTree = "<group>"; };
+		A20000000000000000000005 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A20000000000000000000006 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A20000000000000000000007 /* ListExcelExample.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ListExcelExample.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000008 /* OrdersDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrdersDemoViewController.swift; sourceTree = "<group>"; };
+		A20000000000000000000009 /* DualLockDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DualLockDemoViewController.swift; sourceTree = "<group>"; };
+		A2000000000000000000000A /* EditableDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditableDemoViewController.swift; sourceTree = "<group>"; };
+		A2000000000000000000000B /* MediaDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaDemoViewController.swift; sourceTree = "<group>"; };
+		A2000000000000000000000C /* MutationLabViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MutationLabViewController.swift; sourceTree = "<group>"; };
+		A2000000000000000000000D /* ContentGalleryDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentGalleryDemoViewController.swift; sourceTree = "<group>"; };
+		A2000000000000000000000E /* SelectionTypesDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectionTypesDemoViewController.swift; sourceTree = "<group>"; };
+		A2000000000000000000000F /* DelegateFallbackDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DelegateFallbackDemoViewController.swift; sourceTree = "<group>"; };
+		A20000000000000000000010 /* LocalRefreshDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRefreshDemoViewController.swift; sourceTree = "<group>"; };
+		A20000000000000000000011 /* OrphanRowsDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OrphanRowsDemoViewController.swift; sourceTree = "<group>"; };
+		A20000000000000000000012 /* ConfigChromeDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfigChromeDemoViewController.swift; sourceTree = "<group>"; };
+		A20000000000000000000013 /* CustomCellDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomCellDemoViewController.swift; sourceTree = "<group>"; };
+		A20000000000000000000014 /* PureExcelDemoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PureExcelDemoViewController.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A30000000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000006 /* ListExcel in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A40000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000002 /* ListExcelExample */,
+				A40000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A40000000000000000000002 /* ListExcelExample */ = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000010 /* App */,
+				A40000000000000000000011 /* Support */,
+				A40000000000000000000012 /* Demos */,
+				A20000000000000000000005 /* Assets.xcassets */,
+				A20000000000000000000006 /* Info.plist */,
+			);
+			path = ListExcelExample;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000007 /* ListExcelExample.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000010 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000001 /* AppDelegate.swift */,
+				A20000000000000000000002 /* SceneDelegate.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000011 /* Support */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000003 /* DemoCatalogViewController.swift */,
+				A20000000000000000000004 /* DemoSupport.swift */,
+			);
+			path = Support;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000012 /* Demos */ = {
+			isa = PBXGroup;
+			children = (
+				A40000000000000000000013 /* Scenarios */,
+				A40000000000000000000014 /* Features */,
+				A40000000000000000000015 /* Debug */,
+			);
+			path = Demos;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000013 /* Scenarios */ = {
+			isa = PBXGroup;
+			children = (
+				A20000000000000000000008 /* OrdersDemoViewController.swift */,
+				A20000000000000000000009 /* DualLockDemoViewController.swift */,
+				A2000000000000000000000A /* EditableDemoViewController.swift */,
+				A2000000000000000000000B /* MediaDemoViewController.swift */,
+			);
+			path = Scenarios;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000014 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				A2000000000000000000000D /* ContentGalleryDemoViewController.swift */,
+				A2000000000000000000000E /* SelectionTypesDemoViewController.swift */,
+				A2000000000000000000000F /* DelegateFallbackDemoViewController.swift */,
+				A20000000000000000000010 /* LocalRefreshDemoViewController.swift */,
+				A20000000000000000000011 /* OrphanRowsDemoViewController.swift */,
+				A20000000000000000000012 /* ConfigChromeDemoViewController.swift */,
+				A20000000000000000000013 /* CustomCellDemoViewController.swift */,
+				A20000000000000000000014 /* PureExcelDemoViewController.swift */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		A40000000000000000000015 /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				A2000000000000000000000C /* MutationLabViewController.swift */,
+			);
+			path = Debug;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A60000000000000000000001 /* ListExcelExample */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A70000000000000000000003 /* Build configuration list for PBXNativeTarget "ListExcelExample" */;
+			buildPhases = (
+				A30000000000000000000002 /* Sources */,
+				A30000000000000000000001 /* Frameworks */,
+				A30000000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ListExcelExample;
+			packageProductDependencies = (
+				A50000000000000000000001 /* ListExcel */,
+			);
+			productName = ListExcelExample;
+			productReference = A20000000000000000000007 /* ListExcelExample.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A80000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+					A60000000000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A70000000000000000000001 /* Build configuration list for PBXProject "ListExcelExample" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A40000000000000000000001;
+			packageReferences = (
+				A90000000000000000000001 /* XCLocalSwiftPackageReference ".." */,
+			);
+			productRefGroup = A40000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A60000000000000000000001 /* ListExcelExample */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A30000000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000005 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A30000000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10000000000000000000001 /* AppDelegate.swift in Sources */,
+				A10000000000000000000002 /* SceneDelegate.swift in Sources */,
+				A10000000000000000000003 /* DemoCatalogViewController.swift in Sources */,
+				A10000000000000000000004 /* DemoSupport.swift in Sources */,
+				A10000000000000000000008 /* OrdersDemoViewController.swift in Sources */,
+				A10000000000000000000009 /* DualLockDemoViewController.swift in Sources */,
+				A1000000000000000000000A /* EditableDemoViewController.swift in Sources */,
+				A1000000000000000000000B /* MediaDemoViewController.swift in Sources */,
+				A1000000000000000000000C /* MutationLabViewController.swift in Sources */,
+				A1000000000000000000000D /* ContentGalleryDemoViewController.swift in Sources */,
+				A1000000000000000000000E /* SelectionTypesDemoViewController.swift in Sources */,
+				A1000000000000000000000F /* DelegateFallbackDemoViewController.swift in Sources */,
+				A10000000000000000000010 /* LocalRefreshDemoViewController.swift in Sources */,
+				A10000000000000000000011 /* OrphanRowsDemoViewController.swift in Sources */,
+				A10000000000000000000012 /* ConfigChromeDemoViewController.swift in Sources */,
+				A10000000000000000000013 /* CustomCellDemoViewController.swift in Sources */,
+				A10000000000000000000014 /* PureExcelDemoViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A70000000000000000000011 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = EP7SKUA83H;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A70000000000000000000012 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = EP7SKUA83H;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 13.0;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A70000000000000000000021 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ListExcelExample/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ListExcelExample;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listexcel.example;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A70000000000000000000022 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ListExcelExample/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = ListExcelExample;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.listexcel.example;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A70000000000000000000001 /* Build configuration list for PBXProject "ListExcelExample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A70000000000000000000011 /* Debug */,
+				A70000000000000000000012 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A70000000000000000000003 /* Build configuration list for PBXNativeTarget "ListExcelExample" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A70000000000000000000021 /* Debug */,
+				A70000000000000000000022 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A90000000000000000000001 /* XCLocalSwiftPackageReference ".." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ..;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A50000000000000000000001 /* ListExcel */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ListExcel;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = A80000000000000000000001 /* Project object */;
+}

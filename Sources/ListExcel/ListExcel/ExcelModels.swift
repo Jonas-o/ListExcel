@@ -97,9 +97,10 @@ extension Excel {
         func contentWidth(with font: UIFont, configuration: Excel.Configuration = .init()) -> CGFloat? {
             let horizontalPadding = configuration.cellPadding.horizontalValue
             let cellMargin = configuration.cellMargin
+            let locale = configuration.locale
             switch self {
                 case let .decimal(decimal, style, hiddenZero):
-                    let text = DecimalLabel.DecimalTuple(decimal, style: style, hiddenZero: hiddenZero).text
+                    let text = DecimalLabel.DecimalTuple(decimal, style: style, hiddenZero: hiddenZero).text(locale: locale)
                     if !text.isEmpty {
                         // 计算加上默认间隔（修改 Cell 间隔时此处需要变化）
                         return text.width(font: font) + horizontalPadding
@@ -107,7 +108,7 @@ extension Excel {
                 case let .decimals(values):
                     if !values.isEmpty {
                         // 计算加上默认间隔（修改 Cell 间隔时此处需要变化）
-                        let widths = values.compactMap { $0.text }.map { $0.width(font: font) }
+                        let widths = values.map { $0.text(locale: locale) }.map { $0.width(font: font) }
                         if let max = widths.max() {
                             return max + horizontalPadding
                         }
@@ -131,10 +132,10 @@ extension Excel {
                     }
                 case let .cornerText(text, leadingCorner, trailingCorner):
                     var cornerContentWidth: CGFloat = 0
-                    if let width = leadingCorner?.text.width(font: CornerTextCell.cornerFont) {
+                    if let width = leadingCorner?.text(locale: locale).width(font: CornerTextCell.cornerFont) {
                         cornerContentWidth += width
                     }
-                    if let width = trailingCorner?.text.width(font: CornerTextCell.cornerFont) {
+                    if let width = trailingCorner?.text(locale: locale).width(font: CornerTextCell.cornerFont) {
                         cornerContentWidth += width
                     }
                     if let text, !text.isEmpty {
@@ -145,13 +146,13 @@ extension Excel {
                     }
                 case let .cornerDecimal(decimal, style, leadingCorner, trailingCorner):
                     var cornerContentWidth: CGFloat = 0
-                    if let width = leadingCorner?.text.width(font: CornerTextCell.cornerFont) {
+                    if let width = leadingCorner?.text(locale: locale).width(font: CornerTextCell.cornerFont) {
                         cornerContentWidth += width
                     }
-                    if let width = trailingCorner?.text.width(font: CornerTextCell.cornerFont) {
+                    if let width = trailingCorner?.text(locale: locale).width(font: CornerTextCell.cornerFont) {
                         cornerContentWidth += width
                     }
-                    if let text = style.string(with: decimal), !text.isEmpty {
+                    if let text = decimal?.formatted(style, locale: locale), !text.isEmpty {
                         return max(text.width(font: font) + horizontalPadding, cornerContentWidth)
                     }
                     if cornerContentWidth > 0 {
@@ -159,10 +160,10 @@ extension Excel {
                     }
                 case let .cornerTextField(text, leadingCorner, trailingCorner):
                     var cornerContentWidth: CGFloat = 0
-                    if let width = leadingCorner?.text.width(font: Excel.DefaultCornerTextFieldCell.cornerFont) {
+                    if let width = leadingCorner?.text(locale: locale).width(font: Excel.DefaultCornerTextFieldCell.cornerFont) {
                         cornerContentWidth += width
                     }
-                    if let width = trailingCorner?.text.width(font: Excel.DefaultCornerTextFieldCell.cornerFont) {
+                    if let width = trailingCorner?.text(locale: locale).width(font: Excel.DefaultCornerTextFieldCell.cornerFont) {
                         cornerContentWidth += width
                     }
                     if let text, !text.isEmpty {
@@ -181,7 +182,7 @@ extension Excel {
 public extension Excel.Header {
     /// 排序列的Key
     var sortBy: String { "" }
-    /// 是否又去权限显示
+    /// 是否有权限显示
     var hasPermission: Bool { true }
     /// 列最小宽度
     var minWidth: CGFloat? { nil }

@@ -35,15 +35,21 @@ public class Excel: UIView {
     private let headerCell = ExcelTableViewCell(style: .default, reuseIdentifier: "HeaderCell")
     private let footerCell = ExcelTableViewCell(style: .default, reuseIdentifier: "FooterCell")
     private let footerShadowImageView: UIImageView = {
-        let image = UIImage.lex("lex_side_blur").lex_image(with: .right)
-        return UIImageView(image: image?.resizableImage(withCapInsets: .init(0, 10), resizingMode: .stretch))
+        let image = UIImage.lex("lex_side_blur")
+            .lex_baked(orientation: .right)?
+            .resizableImage(
+                withCapInsets: .init(0, 10),
+                resizingMode: .stretch
+            )
+        return UIImageView(image: image)
     }()
 
     private weak var delegate: (any ExcelDelegate)?
     private var cellRegisters: [Excel.Cell.Register]
     private var rowHeights: [Int: CGFloat] = [:]
     private var columnWidths: [Int: CGFloat] = [:]
-    private var currentOffset: CGFloat = 0
+    /// 各行横向滚动共享偏移；cell layout / willDisplay 据此回写，避免 frame 变更把 offset 冲掉。
+    private(set) var currentOffset: CGFloat = 0
 
     /// 布局 / 外观 / 行为配置。修改后需调用 `applyConfiguration()` 才会刷新界面。
     public var configuration: Configuration
@@ -116,16 +122,18 @@ public class Excel: UIView {
     public override func layoutSubviews() {
         super.layoutSubviews()
         if !footerCell.isHidden {
-            footerCell.frame = .init(width, delegate?.footerHeight ?? 0)
+            footerCell.frame = .init(width, configuration.footerHeight)
             footerCell.bottom = height
             footerShadowImageView.frame = .init(0, footerCell.y - 10, footerCell.width, 10)
         }
         contentView.frame = bounds.inset(by: .bottom(footerCell.height))
+        contentView.layoutIfNeeded()
         reloadFooterShadow()
     }
 
     public func resetContentOffset() {
         currentOffset = 0
+        visibleTableViewCell.forEach { $0.resetContentOffset(0) }
     }
     
     public func reloadData() {
@@ -149,7 +157,7 @@ public class Excel: UIView {
 
     public func reloadFooter() {
         footerCell.contentView.backgroundColor = delegate?.excel(self, backgroundColorAt: .footer) ?? .clear
-        footerCell.rowHeight = delegate?.footerHeight ?? 0
+        footerCell.rowHeight = configuration.footerHeight
         footerCell.columnWidths = columnWidths
         footerCell.isHidden = footerCell.rowHeight == 0
         footerCell.reloadData(currentOffset)
@@ -175,7 +183,7 @@ public class Excel: UIView {
     }
     
     public func reloadColumnWidth(_ column: Int, reason row: Excel.Matrix.Row? = nil) {
-        let width = delegate?.excel(self, columnWidthAt: column) ?? delegate?.columnWidth ?? 0
+        let width = delegate?.excel(self, columnWidthAt: column) ?? 0
         columnWidths[column] = width
         visibleTableViewCell.forEach {
             $0.columnWidths[column] = width
@@ -201,7 +209,7 @@ public class Excel: UIView {
     public func insertRows(at indexPaths: [IndexPath], with animation: UITableView.RowAnimation = .none) {
         syncColumnWidthsFromDelegateRefreshingVisibleIfNeeded()
         for indexPath in indexPaths {
-            let height = delegate?.excel(self, rowHeightAt: indexPath.row) ?? delegate?.rowHeight ?? contentView.rowHeight
+            let height = resolvedRowHeight(at: indexPath.row)
             rowHeights[indexPath.row] = height
         }
         contentView.insertRows(at: indexPaths, with: animation)
@@ -213,7 +221,7 @@ public class Excel: UIView {
     public func reloadRows(at indexPaths: [IndexPath], with animation: UITableView.RowAnimation = .none) {
         syncColumnWidthsFromDelegateRefreshingVisibleIfNeeded()
         for indexPath in indexPaths {
-            let height = delegate?.excel(self, rowHeightAt: indexPath.row) ?? delegate?.rowHeight ?? contentView.rowHeight
+            let height = resolvedRowHeight(at: indexPath.row)
             rowHeights[indexPath.row] = height
         }
         contentView.reloadRows(at: indexPaths, with: animation)
@@ -279,15 +287,19 @@ public class Excel: UIView {
 
 private extension Excel {
     var headerHeight: CGFloat {
-        delegate?.headerHeight ?? 0
+        configuration.headerHeight
     }
 
     var numberOfRows: Int {
-        delegate?.numberOfRows ?? 0
+        delegate?.numberOfRows(in: self) ?? 0
     }
 
     var numberOfColumns: Int {
-        delegate?.numberOfColumns ?? 0
+        delegate?.numberOfColumns(in: self) ?? 0
+    }
+
+    func resolvedRowHeight(at row: Int) -> CGFloat {
+        delegate?.excel(self, rowHeightAt: row) ?? configuration.rowHeight
     }
 
     var visibleTableViewCell: [ExcelTableViewCell] {
@@ -298,8 +310,7 @@ private extension Excel {
     func resetRowHeights() {
         var rowHeights: [Int: CGFloat] = [:]
         (0 ..< numberOfRows).forEach { row in
-            let height = delegate?.excel(self, rowHeightAt: row) ?? delegate?.rowHeight ?? 0
-            rowHeights[row] = height
+            rowHeights[row] = resolvedRowHeight(at: row)
         }
         self.rowHeights = rowHeights
     }
@@ -307,8 +318,7 @@ private extension Excel {
     func resetColumnWidths() {
         var columnWidths: [Int: CGFloat] = [:]
         (0 ..< numberOfColumns).forEach { column in
-            let width = delegate?.excel(self, columnWidthAt: column) ?? delegate?.columnWidth ?? 0
-            columnWidths[column] = width
+            columnWidths[column] = delegate?.excel(self, columnWidthAt: column) ?? 0
         }
         self.columnWidths = columnWidths
     }
@@ -318,7 +328,7 @@ private extension Excel {
         let count = numberOfColumns
         var changed: [Int] = []
         for column in 0 ..< count {
-            let width = delegate?.excel(self, columnWidthAt: column) ?? delegate?.columnWidth ?? 0
+            let width = delegate?.excel(self, columnWidthAt: column) ?? 0
             if columnWidths[column] != width {
                 columnWidths[column] = width
                 changed.append(column)
@@ -386,6 +396,10 @@ extension Excel: UITableViewDelegate, UITableViewDataSource {
         }
         return cell
     }
+
+    public func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
+        (cell as? ExcelTableViewCell)?.resetContentOffset(currentOffset)
+    }
     
     public func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
         selectionType.isRow
@@ -396,63 +410,43 @@ extension Excel: UITableViewDelegate, UITableViewDataSource {
         delegate?.excel(self, didSelectRowAt: .cell(indexPath.row), column: nil)
     }
 
-    // MARK: UIScrollViewDelegate
+    // MARK: UIScrollViewDelegate（仅常用；转 excel(_:scrollView…)）
 
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         reloadFooterShadow()
-        delegate?.scrollViewDidScroll?(scrollView)
-    }
-
-    public func scrollViewDidZoom(_ scrollView: UIScrollView) {
-        delegate?.scrollViewDidZoom?(scrollView)
+        delegate?.excel(self, scrollViewDidScroll: scrollView)
     }
 
     public func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {
-        delegate?.scrollViewWillBeginDragging?(scrollView)
+        delegate?.excel(self, scrollViewWillBeginDragging: scrollView)
     }
 
     public func scrollViewWillEndDragging(_ scrollView: UIScrollView, withVelocity velocity: CGPoint, targetContentOffset: UnsafeMutablePointer<CGPoint>) {
-        delegate?.scrollViewWillEndDragging?(scrollView, withVelocity: velocity, targetContentOffset: targetContentOffset)
+        delegate?.excel(self, scrollViewWillEndDragging: scrollView, withVelocity: velocity, targetContentOffset: targetContentOffset)
     }
 
     public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         contentView.visibleCells.filter { $0.isHighlighted }.forEach { $0.setHighlighted(false, animated: true) }
-        delegate?.scrollViewDidEndDragging?(scrollView, willDecelerate: decelerate)
+        delegate?.excel(self, scrollViewDidEndDragging: scrollView, willDecelerate: decelerate)
     }
 
     public func scrollViewWillBeginDecelerating(_ scrollView: UIScrollView) {
-        delegate?.scrollViewWillBeginDecelerating?(scrollView)
+        delegate?.excel(self, scrollViewWillBeginDecelerating: scrollView)
     }
 
     public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
-        delegate?.scrollViewDidEndDecelerating?(scrollView)
+        delegate?.excel(self, scrollViewDidEndDecelerating: scrollView)
     }
 
     public func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
-        delegate?.scrollViewDidEndScrollingAnimation?(scrollView)
-    }
-
-    public func viewForZooming(in scrollView: UIScrollView) -> UIView? {
-        delegate?.viewForZooming?(in: scrollView)
-    }
-
-    public func scrollViewWillBeginZooming(_ scrollView: UIScrollView, with view: UIView?) {
-        delegate?.scrollViewWillBeginZooming?(scrollView, with: view)
-    }
-
-    public func scrollViewDidEndZooming(_ scrollView: UIScrollView, with view: UIView?, atScale scale: CGFloat) {
-        delegate?.scrollViewDidEndZooming?(scrollView, with: view, atScale: scale)
+        delegate?.excel(self, scrollViewDidEndScrollingAnimation: scrollView)
     }
 
     public func scrollViewShouldScrollToTop(_ scrollView: UIScrollView) -> Bool {
-        delegate?.scrollViewShouldScrollToTop?(scrollView) ?? true
+        delegate?.excel(self, scrollViewShouldScrollToTop: scrollView) ?? true
     }
 
     public func scrollViewDidScrollToTop(_ scrollView: UIScrollView) {
-        delegate?.scrollViewDidScrollToTop?(scrollView)
-    }
-
-    public func scrollViewDidChangeAdjustedContentInset(_ scrollView: UIScrollView) {
-        delegate?.scrollViewDidChangeAdjustedContentInset?(scrollView)
+        delegate?.excel(self, scrollViewDidScrollToTop: scrollView)
     }
 }

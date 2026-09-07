@@ -8,8 +8,8 @@
 import UIKit
 
 extension ListExcelView {
-    func excel(_ excel: Excel, columnWidthAt column: Int) -> CGFloat? {
-        guard 0 ..< widths.count ~= column else { return nil }
+    func excel(_ excel: Excel, columnWidthAt column: Int) -> CGFloat {
+        guard 0 ..< widths.count ~= column else { return 0 }
         return widths[column]
     }
 
@@ -35,10 +35,13 @@ extension ListExcelView {
         switch matrix.row {
             case .header:
                 handleHeader(cell: cell, at: header, column: matrix.column)
-                cell.showLineLayer = true
-                if let sortColumn, sortColumn.column == matrix.column, let cell = cell as? Excel.HeaderTextCell {
+                if let sortColumn,
+                   sortColumn.column == matrix.column,
+                   let cell = cell as? Excel.HeaderTextCell {
                     cell.orderType = sortColumn.type
-                    cell.textLabel.textAlignment = .left
+                    if sortColumn.type != .none {
+                        cell.textLabel.textAlignment = .left
+                    }
                 }
             case .footer:
                 handleFooter(cell: cell, at: header, column: matrix.column)
@@ -142,7 +145,7 @@ extension ListExcelView {
                 return content ?? .text(header.title)
             case .footer where !rowDatas.isEmpty:
                 let content = footerContent(at: header, column: column)
-                if content == nil, column == 0, let footerSumTitle = configuration.footerSumTitle {
+                if content == nil, column == 0, let footerSumTitle = configuration.resolvedFooterSumTitle() {
                     // Footer的第一列显示汇总 title
                     return .text(footerSumTitle)
                 }

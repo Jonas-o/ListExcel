@@ -1,175 +1,217 @@
 # ListExcel
 
-iOS Swift 表格组件：基础表格 `Excel` + 泛型通用列表 `ListExcelView`。
+面向 iOS 的 Swift 表格组件库：提供基础矩阵引擎 `Excel`，以及带列定义、排序、多选、分页与合计栏的通用列表 `ListExcelView`。
 
-支持左右锁定列、列排序、行多选、分页加载与底部合计栏。
+| | |
+|---|---|
+| 平台 | iOS 13+ |
+| 语言 | Swift 5.9+ |
+| 分发 | Swift Package Manager |
+| 依赖 | 仅 UIKit |
 
-## 组件
+## 特性
 
-| 组件 | 说明 |
-|------|------|
-| `Excel` | 基础表格（`UITableView` + 左右锁定列 `UICollectionView`） |
-| `ListExcelView<T>` | 泛型通用列表（`T: Excel.Header`） |
-| `ExcelTotalView` | 底部合计 / 指示器 / 操作按钮 |
+- 左右锁定列与横向同步滚动
+- 列排序、行多选、触底分页
+- 声明式列内容（`Excel.Content`）+ 可选 Delegate 回退
+- 写入 API 驱动的列宽增量计算（`reset` / `append` / `update` / `replace`）
+- 可替换 Cell 类型与自定义输入框
 
-## 目录
+## 安装
 
-```
-ListExcel/
-├── Package.swift
-├── Sources/ListExcel/
-│   ├── Excel/                 # 基础表格引擎
-│   │   ├── Excel.swift
-│   │   ├── ExcelTypes.swift
-│   │   ├── ExcelDelegate.swift
-│   │   ├── ExcelTableViewCell.swift
-│   │   ├── ExcelConfiguration.swift
-│   │   ├── ExcelTheme.swift
-│   │   ├── ExcelTextField.swift
-│   │   └── Cells/
-│   ├── ListExcel/             # 通用列表
-│   │   ├── ListExcelView.swift
-│   │   ├── ListExcelView+*.swift
-│   │   ├── ListExcelDelegate.swift
-│   │   ├── ListExcelConfiguration.swift
-│   │   └── ExcelModels.swift
-│   ├── ExcelTotalView.swift
-│   ├── DecimalLabel.swift
-│   ├── Support/
-│   └── Resources/
-└── README.md
-```
-
-Delegate 可按需只遵循子集协议，或使用组合别名 `ListExcelDelegate`：
-
-- `ListExcelDataSource` — 内容 / 背景色
-- `ListExcelCellHandling` — handleHeader / handleRow / handleFooter
-- `ListExcelInteractionDelegate` — 点击 / 排序 / 多选 / 分页
-
-## 接入
-
-**SPM**
+在 `Package.swift` 中：
 
 ```swift
-.package(url: "https://github.com/Jonas-o/ListExcel.git", from: "0.1.0")
+dependencies: [
+    .package(url: "https://github.com/Jonas-o/ListExcel.git", from: "0.1.0")
+]
 ```
 
-> 当前仅支持 Swift Package Manager；CocoaPods 暂不维护。
+在 Xcode：File → Add Package Dependencies… → 填入仓库 URL。
+
+```swift
+import ListExcel
+```
+
+## 快速开始
+
+```swift
+enum OrderHeader: String, CaseIterable, Excel.Header {
+    case name, amount, select
+
+    var title: String { rawValue }
+
+    var sortBy: String {
+        self == .name ? "name" : ""
+    }
+
+    func content(for model: Excel.RowModel, row: Int) -> Excel.Content? {
+        guard let order = model as? OrderRow else { return nil }
+        switch self {
+        case .name: return .text(order.name)
+        case .amount: return .decimal(order.amount)
+        case .select: return .select
+        }
+    }
+}
+
+struct OrderRow: Excel.RowModel, Excel.ModelIdentifier {
+    var identifier: String
+    var name: String
+    var amount: Decimal
+}
+
+final class OrdersController: UIViewController, ListExcelDelegate {
+    typealias T = OrderHeader
+
+    private lazy var listView = ListExcelView<OrderHeader>(configuration: {
+        var config = ListExcelView<OrderHeader>.Configuration()
+        config.excel.leadingLockCount = 1
+        config.showsTotalView = true
+        return config
+    }())
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        view.addSubview(listView)
+        listView.frame = view.bounds
+        listView.delegate = self
+
+        listView.setHeaders(OrderHeader.allCases)
+        listView.reset([
+            OrderRow(identifier: "1", name: "A-100", amount: 12.5),
+            OrderRow(identifier: "2", name: "B-200", amount: 8),
+        ])
+    }
+}
+```
+
+日常改数据请走写入 API，不要直接赋值 `headers` / `rowDatas`。
+
+## 架构一览
+
+| 类型 | 职责 |
+|------|------|
+| `Excel` | 矩阵渲染引擎（`UITableView` + 锁列 `UICollectionView`） |
+| `ListExcelView<T>` | 业务列表层（`T: Excel.Header`）：列宽、排序、多选、分页、合计 |
+| `ExcelTotalView` | 底部合计 / 指示器 / 操作按钮 |
+
+Delegate 可按需组合，也可直接用别名 `ListExcelDelegate`：
+
+| 协议 | 内容 |
+|------|------|
+| `ListExcelDataSource` | 表头/行/表尾内容与背景色 |
+| `ListExcelCellHandling` | `handleHeader` / `handleRow` / `handleFooter` |
+| `ListExcelInteractionDelegate` | 点击、排序、多选、分页 |
+
+### 仅使用 `Excel`
+
+不需要列定义 / 排序 / 分页时，实现 `ExcelDelegate` 并直接持有引擎：
+
+```swift
+final class MatrixController: UIViewController, ExcelDelegate {
+    private var excelView: Excel!
+
+    func numberOfRows(in excel: Excel) -> Int { 20 }
+    func numberOfColumns(in excel: Excel) -> Int { 5 }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        var configuration = Excel.Configuration()
+        configuration.leadingLockCount = 1
+        let excel = Excel(delegate: self, configuration: configuration)
+        view.addSubview(excel)
+        excelView = excel
+        excel.reloadData()
+    }
+
+    func excel(_ excel: Excel, columnWidthAt column: Int) -> CGFloat { 72 }
+
+    func excel(_ excel: Excel, dequeueReusableCellAt matrix: Excel.Matrix) -> Excel.Cell.ClassType? {
+        matrix.row.isHeader ? .headerText : .text
+    }
+
+    func excel(_ excel: Excel, handle cell: some Excel.Cell, at matrix: Excel.Matrix) {
+        cell.bindContent(.text("\(matrix.column)"), context: .init(textAlignment: .center))
+    }
+}
+```
+
+完整用法见 Example 中的「纯 Excel 引擎」场景。
+
+## 内容绑定
+
+单元格内容按优先级取值（命中即停）：
+
+1. `Header.content(for:row:)` — 列上声明式绑定
+2. `ListExcelDataSource` 的 `contentAt` / `headerContentAt` / `footerContentAt`
+
+表头两者皆空时默认 `.text(header.title)`。  
+Footer 第 0 列皆空且 `footerSumTitle != nil` 时显示合计标题（默认 `.localeDefault`）。
+
+常见 `Excel.Content`：
+
+- `.text` / `.decimal` / `.decimals`（数字格式跟 `excel.locale`）
+- `.select` / `.image` / `.iconText`
+- `.textField` / `.cornerText` / `.cornerTextField` / …
+
+`Content` 负责选型与常规字段；图片等无法用 Content 表达的内容，在 `handleRow` / `handleHeader` / `handleFooter` 中配置。
 
 ## 数据写入
 
-`headers` / `rowDatas` 对外只读（模块内可写）；请通过下列 API 改数据（**先改数据与列宽，再刷新 UI**）：
+`headers` / `rowDatas` 对外只读。通过下列 API 修改（先更新数据与列宽，再刷新 UI）：
 
 | API | 作用 |
 |-----|------|
-| `setHeaders(_:)` | 换表头/列定义；清空列宽缓存并全量重测；整表刷新 |
-| `reset(_:)` | 整表替换行；列宽缓存 diff；`selectRows` 与新数据 id **交集保留** |
+| `setHeaders(_:)` | 换列定义；清空列宽缓存并全量重测；整表刷新 |
+| `reset(_:)` | 整表替换；列宽缓存 diff；`selectRows` 与新 id 交集保留 |
 | `append(_:)` | 尾部追加；只测新行；条件允许时 `insertRows` |
-| `update(at:_:)` | 按下标换一行；`reloadRows` |
-| `replace(_:)` | 按 `ModelIdentifier` 找**第一个**匹配行并 `update` |
+| `update(at:_:)` | 按下标替换一行 |
+| `replace(_:)` | 按 `ModelIdentifier` 找第一个匹配行并 `update` |
 
-不要再写 `listView.rowDatas = …` / `listView.headers = …`。
+### 批量写入与 `isLoading`
 
-### `isLoading` 与批量写入
-
-`isLoading == true` 时，写入 API / `reloadData` / `applyConfiguration` **不立刻刷新表格**，只记 `fullReconcile`；`isLoading = false` 后以 **`widthPolicy: .keep`** 整表对齐（不回放 insert）。
+`isLoading == true` 时，写入 / `reloadData` / `applyConfiguration` 不立刻刷表，只记待对齐；设回 `false` 后以 `.keep` 整表刷新一次。
 
 ```swift
 listView.isLoading = true
-listView.append(pageRows)   // 可多次
-listView.isLoading = false  // 一次整表对齐
-```
-
-### `reloadData` 与列宽策略
-
-```swift
-listView.reloadData()
-// 等价于 widthPolicy: .recalculate（宿主无参即全量重测列宽）
-
-listView.reloadData(immediate: true, widthPolicy: .keep) // 库内 reset 式刷新使用
-```
-
-`applyConfiguration` 会 `invalidate` 列宽缓存后 `.recalculate`。
-
-### `clearSelection`
-
-只刷新 `.select` 列（找不到该列时 fallback `.keep` 整表 reload），不重算列宽。
-
-## 数据绑定
-
-行/表头/表尾内容有两条来源，**按优先级取值**（命中即停）：
-
-1. **`Header.content(for:row:)`** — 列上声明式绑定（适合列逻辑固定）
-2. **`ListExcelDataSource` 的 `contentAt` / `headerContentAt` / `footerContentAt`** — Delegate 集中提供
-
-表头若两者皆无，默认 `.text(header.title)`。  
-Footer 第 0 列若皆无且配置了 `footerSumTitle`，显示合计标题。
-
-`Content` 决定 Cell 类型并填充常规字段；**无法用 Content 表达的**（如 `.image` 的实际图片）在 `handleRow` / `handleHeader` / `handleFooter` 里配置。
-
-## 配置
-
-通过 `ListExcelView.Configuration` / `Excel.Configuration` 统一配置布局与外观；Cell 在展示前由 `Excel.Appearance` 注入。
-
-### `applyConfiguration` vs `reloadData`
-
-| API | 何时用 |
-|-----|--------|
-| `applyConfiguration()` / `applyConfiguration(_:)` | 改了**布局 / 外观 / 文案类配置**后调用；先同步列表附属 UI，再 invalidate 列宽并 `.recalculate` 刷新 |
-| `reloadData()` | 需要**整表重刷**且接受默认全量重测列宽时；日常改数据请优先用 `reset` / `append` / `update` / `replace` |
-
-只改 `configuration`（或其字段）**不会**自动刷新，必须再调 `applyConfiguration()`。  
-只改数据则调 `reloadData()` 即可，不必再 apply（除非同时改了配置）。
-
-#### `isLoading` 与刷新
-
-`isLoading == true` 时，`reloadData` / `applyConfiguration` **不会立刻刷新表格**（附属 chrome 仍会随 apply 更新），只记下待刷新；待 `isLoading = false` 后会 **立即**补刷一次。
-
-推荐分页顺序：
-
-```swift
-listView.isLoading = true
-// 请求…
-listView.append(pageRows)  // 或 reset(firstPage)
-listView.total = …
-listView.page = …
+listView.append(nextPage)
+listView.total = totalCount
+listView.page = page
 listView.isLoading = false
 ```
 
+日常改数据优先用写入 API。需要整表重刷时再调用 `reloadData`；列宽策略（`.recalculate` / `.keep` / `.reconcile`）仅在该路径使用，细节见 API 注释。
+
+## 配置
+
+布局与外观集中在 `ListExcelView.Configuration`（内含 `Excel.Configuration`）。  
+只改 `configuration` 字段不会自动生效，需再调用 `applyConfiguration()`。
+
 ```swift
-var config = ListExcelView<MyHeader>.Configuration()
-config.excel.rowHeight = 48
-config.excel.accentColor = .systemBlue
-config.excel.leadingLockCount = 2
-config.showsSortHint = false
-
-let listView = ListExcelView<MyHeader>(configuration: config)
-
-// 运行时批改配置后主动应用
 listView.configuration.excel.rowHeight = 56
-listView.configuration.showsSortHint = true
+listView.configuration.excel.leadingLockCount = 2
+listView.configuration.excel.locale = Excel.Locale.zhCN   // enUS / jaJP / current
+listView.configuration.footerSumTitle = .localeDefault   // 或 .custom("本页合计") / nil
+listView.configuration.totalText = .custom { "共 \($0) 条" }
 listView.applyConfiguration()
-
-// 数据更新
-listView.setHeaders(myHeaders)
-listView.reset(myRows)
 ```
 
-也可直接传入新配置：`listView.applyConfiguration(config)`。
+| API | 何时用 |
+|-----|--------|
+| `applyConfiguration` | 改了布局 / 外观 / locale / 文案类配置 |
+| `reloadData` | 需要整表重刷（日常改数据优先用写入 API） |
 
-排序提示文案可通过 `sortHintProvider` 覆盖；合计文案可通过 `totalTextProvider` 覆盖。
+数字格式见 `NumberStyle`（`.decimal` / `.currency` / …）；内置文案随 `excel.locale` 的 language（zh / en / ja），`.custom` 优先。
 
-## 自定义输入框
+## 自定义 Cell / 输入框
 
-默认使用 `Excel.TextFieldCell<ExcelTextField>` / `Excel.CornerTextFieldCell<ExcelTextField>`。  
-宿主可在**初始化**时用自己的 `UITextField` 子类覆盖 Cell 映射（仅生效一次，之后不可改；需遵循 `ExcelTextInput`）：
+初始化时通过 `cellClasses` 覆盖默认映射（仅生效一次）：
 
 ```swift
-final class MyTextField: UITextField, ExcelTextInput {
-    // 已有 init(frame:) 即可；可按需实现 resetAppearance()
-}
+final class MyTextField: UITextField, ExcelTextInput {}
 
-let listView = ListExcelView<MyHeader>(
+let listView = ListExcelView<OrderHeader>(
     configuration: config,
     cellClasses: [
         .textField: Excel.TextFieldCell<MyTextField>.self,
@@ -178,26 +220,25 @@ let listView = ListExcelView<MyHeader>(
 )
 ```
 
-在 `handleRow` 中配置业务属性：
+在 `handleRow` 中配置键盘、回调等业务属性；`Content` 仍使用 `.textField` / `.cornerTextField`。
 
-```swift
-func listExcelView(
-    _ excelView: ListExcelView<MyHeader>,
-    handleRow cell: some Excel.Cell,
-    union: Excel.CellUnion<MyHeader>
-) {
-    if let cell = cell as? Excel.TextFieldCell<MyTextField> {
-        cell.textField.keyboardType = .decimalPad
-        cell.editingAction = { _, field, event in
-            // field 类型为 MyTextField
-        }
-    }
-}
+## 示例与测试
+
+仓库内 `Example/ListExcelExample.xcodeproj` 以 Local Package 依赖本库，覆盖锁列、排序、编辑、分页、Content 类型等场景：
+
+```bash
+open Example/ListExcelExample.xcodeproj
 ```
 
-`Content` 仍使用 `.textField("...")` / `.cornerTextField(...)`，业务侧输入配置留在宿主，不进入 ListExcel。
+单元测试（需 iOS Simulator）：
 
-## 后续待办
+```bash
+xcodebuild test -scheme ListExcel \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
+```
 
-- [ ] 示例工程与单元测试
-- [ ] 正式发版
+也可在 Xcode 中打开 Package，对 `ListExcel` scheme 执行 Product → Test。
+
+## License
+
+[MIT](LICENSE)

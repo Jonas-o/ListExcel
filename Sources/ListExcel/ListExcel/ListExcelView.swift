@@ -19,7 +19,7 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
     var canLoadMore = true
     private let bottomNoticeLabel = UILabel()
     private let currentSortLabel = UILabel()
-    private let clearSortButton = NormalButton(title: ExcelTheme.clearSortTitle)
+    private let clearSortButton = NormalButton(title: "")
 
     public weak var delegate: (any ListExcelDelegate<T>)?
 
@@ -47,7 +47,7 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
     public internal(set) var headers: [T] = []
     public internal(set) var rowDatas: [any Excel.RowModel] = []
 
-    // ExcelDelegate（由 configuration 驱动）
+    // Excel 布局（由 configuration 驱动）
     var leadingLockCount: Int { configuration.excel.leadingLockCount }
     var trailingLockCount: Int { configuration.excel.trailingLockCount }
     var headerHeight: CGFloat { configuration.excel.headerHeight }
@@ -57,7 +57,7 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
     // 表格数据
     public var total: Int = 0 {
         didSet {
-            totalView.resetTotalText(configuration.totalText(for: total))
+            totalView.resetTotalText(configuration.resolvedTotalText(for: total))
         }
     }
 
@@ -86,7 +86,7 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
             currentSortLabel.isHidden = true
             clearSortButton.isHidden = true
             if configuration.showsSortHint, let sortColumn {
-                currentSortLabel.text = configuration.sortHint(for: sortColumn)
+                currentSortLabel.text = configuration.resolvedSortHint(for: sortColumn)
                 currentSortLabel.isHidden = false
                 clearSortButton.isHidden = false
             }
@@ -122,18 +122,17 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
         bottomNoticeLabel.isHidden = true
         bottomNoticeLabel.font = .default
         bottomNoticeLabel.textColor = .textLight
-        totalView.addSubview(bottomNoticeLabel)
 
         currentSortLabel.isHidden = true
         currentSortLabel.font = .default
         currentSortLabel.textColor = .textLight
-        totalView.addSubview(currentSortLabel)
 
         clearSortButton.isHidden = true
         clearSortButton.lex_tapBlock = { [weak self] _ in
             self?.clearSorts()
         }
-        totalView.addSubview(clearSortButton)
+        // 中间可横滑区域：排序提示 / 清除 / notice；左右由 ExcelTotalView 固定 action 与合计/指示器
+        totalView.leadingAccessoryViews = [currentSortLabel, clearSortButton, bottomNoticeLabel]
         syncListChrome()
     }
 
@@ -155,10 +154,13 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
     }
 
     private func syncListChrome() {
-        excelView.configuration = configuration.excel
-        clearSortButton.setTitle(configuration.clearSortTitle, for: .normal)
+        var excelConfiguration = configuration.excel
+        // enlargeImageRows 时把解析后的行高写入引擎，避免再依赖 Delegate 属性
+        excelConfiguration.rowHeight = configuration.resolvedRowHeight
+        excelView.configuration = excelConfiguration
+        clearSortButton.setTitle(configuration.resolvedClearSortTitle(), for: .normal)
         totalView.isHidden = !configuration.showsTotalView
-        totalView.resetTotalText(configuration.totalText(for: total))
+        totalView.resetTotalText(configuration.resolvedTotalText(for: total))
         bottomNoticeLabel.font = configuration.excel.rowFont
         bottomNoticeLabel.textColor = configuration.excel.textColor.withAlphaComponent(0.6)
         currentSortLabel.font = configuration.excel.rowFont
@@ -172,28 +174,15 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
         let totalViewHeight = totalView.isHidden ? 0 : totalView.height
         excelView.frame = bounds.inset(by: safeAreaInsets.withBottom(totalViewHeight + safeAreaInsets.bottom))
         totalView.frame = .init(0, excelView.bottom, excelView.width, totalView.height)
-        
-        var startX: CGFloat = 20
+        // 排序 / notice 显隐变化后让 totalView 重排中间可滑附属视图
         if !currentSortLabel.isHidden {
             currentSortLabel.sizeToFit()
             clearSortButton.sizeToFit()
-            
-            currentSortLabel.x = startX
-            currentSortLabel.centerY = totalView.height / 2
-            clearSortButton.centerY = currentSortLabel.centerY
-            clearSortButton.x = currentSortLabel.right + 5
-            
-            startX = clearSortButton.right + 20
         }
-        
         if !bottomNoticeLabel.isHidden {
             bottomNoticeLabel.sizeToFit()
-
-            bottomNoticeLabel.x = startX
-            bottomNoticeLabel.centerY = totalView.height / 2
-            
-            startX = bottomNoticeLabel.right + 20
         }
+        totalView.setNeedsLayout()
     }
     
     public override func sizeThatFits(_ size: CGSize) -> CGSize {

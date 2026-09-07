@@ -137,7 +137,13 @@ final class ExcelTableViewCell: BaseTableViewCell {
             contentCollectionView.frame = contentView.bounds.inset(by: .init(0, contenStartX, 0, contenRight))
             holdOffset = false
         }
+        contentCollectionView.layoutIfNeeded()
+        // frame / contentSize 变化会把 contentOffset 冲掉，按共享偏移回写
+        if let parentExcel {
+            resetContentOffset(parentExcel.currentOffset)
+        }
         reloadShadow()
+        contentView.lex_refreshBorderLayers()
     }
 
     @objc private func contentCollectionViewDidTap(_ sender: UITapGestureRecognizer) {
@@ -152,10 +158,14 @@ final class ExcelTableViewCell: BaseTableViewCell {
     var selectionType: Excel.SelectionType = .row() {
         didSet {
             switch selectionType {
-                case .none: break
+                case .none:
+                    selectionStyle = .none
                 case let .cell(color):
+                    selectionStyle = .none
                     visibleCells.forEach { $0.highlightedColor = color }
                 case let .row(color), let .rowSelection(color):
+                    // 行选依赖 selectedBackgroundView；selectionStyle=.none 时 UIKit 不会展示
+                    selectionStyle = .default
                     selectedBackgroundView?.backgroundColor = color
             }
         }
@@ -172,8 +182,7 @@ final class ExcelTableViewCell: BaseTableViewCell {
     private var holdOffset = false
     public func reloadData(_ contentOffset: CGFloat) {
         collectionViews.forEach { $0.reloadData() }
-        resetContentOffset(contentOffset)
-        reloadShadow()
+        setNeedsLayout()
     }
     
     public func resetContentOffset(_ contentOffset: CGFloat) {
@@ -235,16 +244,17 @@ final class ExcelTableViewCell: BaseTableViewCell {
 
 extension ExcelTableViewCell {
     var leadingCount: Int {
-        max(dataSource?.leadingLockCount ?? 0, 0)
+        max(parentExcel?.configuration.leadingLockCount ?? 0, 0)
     }
 
     var contentCount: Int {
-        let columns = dataSource?.numberOfColumns ?? 0
+        guard let parentExcel else { return 0 }
+        let columns = dataSource?.numberOfColumns(in: parentExcel) ?? 0
         return max(columns - leadingCount - trailingCount, 0)
     }
 
     var trailingCount: Int {
-        max(dataSource?.trailingLockCount ?? 0, 0)
+        max(parentExcel?.configuration.trailingLockCount ?? 0, 0)
     }
 
     var collectionViews: [UICollectionView] {

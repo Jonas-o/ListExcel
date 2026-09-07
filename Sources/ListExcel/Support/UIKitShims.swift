@@ -45,27 +45,72 @@ class NormalButton: UIButton {
         case green, red, blue, black, gray, light
         var textColor: UIColor {
             switch self {
-            case .green: return .lightGreen
-            case .red: return .softRed
-            case .blue: return .tintBlue
-            case .black: return .textBlack
-            case .gray: return .textGray
-            case .light: return .textLight
+                case .green: return .softGreen
+                case .red: return .softRed
+                case .blue: return .tintBlue
+                case .black: return .textBlack
+                case .gray: return .textGray
+                case .light: return .textLight
             }
         }
     }
 
     var style: TintColorStyle = .green {
-        didSet { setTitleColor(style.textColor, for: .normal) }
+        didSet {
+            setTitleColor(style.textColor, for: .normal)
+            tintColor = style.textColor
+        }
     }
 
-    convenience init(title: String? = nil, image: UIImage? = nil, style: TintColorStyle = .green) {
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        applyStyle(.green, title: nil, image: nil, usesOriginalImage: false)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        applyStyle(.green, title: nil, image: nil, usesOriginalImage: false)
+    }
+
+    /// 使用 system 类型，保留系统按压高亮；指示器可用 `usesOriginalImage` 避免 tint 洗色。
+    convenience init(
+        title: String? = nil,
+        image: UIImage? = nil,
+        style: TintColorStyle = .green,
+        usesOriginalImage: Bool = false
+    ) {
         self.init(type: .system)
-        setTitle(title, for: .normal)
-        setImage(image, for: .normal)
+        applyStyle(style, title: title, image: image, usesOriginalImage: usesOriginalImage)
+    }
+
+    private static let imageTitleSpacing: CGFloat = 5
+
+    private func applyStyle(
+        _ style: TintColorStyle,
+        title: String?,
+        image: UIImage?,
+        usesOriginalImage: Bool
+    ) {
         self.style = style
+        setTitle(title, for: .normal)
+        if let image {
+            setImage(
+                image.withRenderingMode(usesOriginalImage ? .alwaysOriginal : .alwaysTemplate),
+                for: .normal
+            )
+            let spacing = Self.imageTitleSpacing
+            imageEdgeInsets = .init(0, -spacing / 2, 0, spacing / 2)
+            titleEdgeInsets = .init(0, spacing / 2, 0, -spacing / 2)
+            contentEdgeInsets = .init(0, spacing / 2)
+        } else {
+            setImage(nil, for: .normal)
+            imageEdgeInsets = .zero
+            titleEdgeInsets = .zero
+            contentEdgeInsets = .zero
+        }
         titleLabel?.font = .default
         setTitleColor(style.textColor, for: .normal)
+        tintColor = style.textColor
         sizeToFit()
     }
 }

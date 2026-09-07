@@ -1,11 +1,36 @@
 .DS_Store
+.cursor/
+.idea/
+*.log
+docs/
+
+# SwiftPM / Xcode 构建
 .swiftpm/
 .build/
+build/
+**/build/
 DerivedData/
+**/DerivedData/
+.derivedData/
+
+# Xcode 用户态 / 遗留用户文件
 xcuserdata/
-.cursor/
+**/xcuserdata/
 *.xcuserstate
+*.moved-aside
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# Xcode / 打包产物
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+timeline.xctimeline
+playground.xcworkspace
+
+# CocoaPods（本仓库未用，预留）
 Pods/
 Podfile.lock
-*.log
-.idea/

@@ -23,7 +23,7 @@ enum ExcelTheme {
     static let footerFont: UIFont = .default
 
     static let textColor: UIColor = .textBlack
-    static let accentColor: UIColor = .lightGreen
+    static let accentColor: UIColor = .softGreen
     static let headerBackgroundColor: UIColor = .hex("#F4F6F8")
     static let highlightColor: UIColor = .backgroundGray
     static let separatorColor: UIColor = UIColor(white: 0.85, alpha: 1)
@@ -31,18 +31,69 @@ enum ExcelTheme {
 
     static var defaultSelectionType: Excel.SelectionType { .row(highlightColor) }
 
-    static let footerSumTitle = "合计"
-    static let clearSortTitle = "清除"
     static let showsSortHint = true
     static let loadMoreThreshold: CGFloat = 100
     static let showsTotalView = true
 
-    static func totalText(for count: Int) -> String {
-        "共计\(count)条"
+    static let defaultFractionDigits = 2
+    static let noneMaximumFractionDigits = 4
+
+    private enum LanguageBucket {
+        case zh
+        case en
+        case ja
     }
 
-    static func sortHint<T: Excel.Header>(for column: Excel.SortColumn<T>) -> String {
-        let order = column.type == .ascending ? "升序" : "降序"
-        return "当前按【\(column.header.title)】\(order)"
+    private static func languageBucket(for locale: Foundation.Locale) -> LanguageBucket {
+        let code: String?
+        if #available(iOS 16, *) {
+            code = locale.language.languageCode?.identifier
+        } else {
+            code = locale.languageCode
+        }
+        switch code {
+            case "zh": return .zh
+            case "ja": return .ja
+            default: return .en
+        }
+    }
+
+    static func footerSumTitle(locale: Foundation.Locale) -> String {
+        switch languageBucket(for: locale) {
+            case .zh: return "合计"
+            case .ja: return "合計"
+            case .en: return "Total"
+        }
+    }
+
+    static func clearSortTitle(locale: Foundation.Locale) -> String {
+        switch languageBucket(for: locale) {
+            case .zh: return "清除"
+            case .ja: return "クリア"
+            case .en: return "Clear"
+        }
+    }
+
+    static func totalText(for count: Int, locale: Foundation.Locale) -> String {
+        switch languageBucket(for: locale) {
+            case .zh: return "共计\(count)条"
+            case .ja: return "全\(count)件"
+            case .en: return "Total \(count)"
+        }
+    }
+
+    static func sortHint<T: Excel.Header>(for column: Excel.SortColumn<T>, locale: Foundation.Locale) -> String {
+        let title = column.header.title
+        switch languageBucket(for: locale) {
+            case .zh:
+                let order = column.type == .ascending ? "升序" : "降序"
+                return "当前按【\(title)】\(order)"
+            case .ja:
+                let order = column.type == .ascending ? "昇順" : "降順"
+                return "【\(title)】で\(order)"
+            case .en:
+                let order = column.type == .ascending ? "ascending" : "descending"
+                return "Sorted by 【\(title)】 \(order)"
+        }
     }
 }

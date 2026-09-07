@@ -101,19 +101,35 @@ extension ListExcelView {
         didSelectFooter(at: header, column: column)
     }
 
-    // MARK: UIScrollViewDelegate
+    // MARK: Scroll
 
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        guard scrollView == tableView, canLoadMore, !isLoading, rowDatas.count < total else { return }
+    func handleExcelScrollViewDidScroll(_ scrollView: UIScrollView) {
+        guard scrollView == tableView else { return }
+        let panTranslationY: CGFloat
         if let superview = scrollView.superview {
-            let point = scrollView.panGestureRecognizer.translation(in: superview)
-            if point.y >= 0 {
-                return
-            }
+            panTranslationY = scrollView.panGestureRecognizer.translation(in: superview).y
+        } else {
+            // 无 superview 时不拦截方向（与历史行为一致：跳过 translation 检查）
+            panTranslationY = -1
         }
+        triggerLoadMoreIfNeeded(
+            contentOffsetY: scrollView.contentOffset.y,
+            viewportHeight: scrollView.height,
+            panTranslationY: panTranslationY
+        )
+    }
+
+    /// 触底加载判定（抽出便于单测；UIPan 在未激活态下 translation 常为 0）。
+    func triggerLoadMoreIfNeeded(
+        contentOffsetY: CGFloat,
+        viewportHeight: CGFloat,
+        panTranslationY: CGFloat
+    ) {
+        guard canLoadMore, !isLoading, rowDatas.count < total else { return }
+        guard panTranslationY < 0 else { return }
         let tableHeaderViewHeight = tableView.tableHeaderView?.height ?? 0
         let realContentSize = rowHeight * CGFloat(numberOfRows) + headerHeight + tableHeaderViewHeight
-        if realContentSize <= scrollView.contentOffset.y + scrollView.height + configuration.loadMoreThreshold {
+        if realContentSize <= contentOffsetY + viewportHeight + configuration.loadMoreThreshold {
             canLoadMore = false
             requestNextPage()
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {

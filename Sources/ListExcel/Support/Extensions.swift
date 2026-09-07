@@ -152,9 +152,9 @@ extension UIColor {
         UIColor(red: r / 255, green: g / 255, blue: b / 255, alpha: 1)
     }
 
-    static var softRed: UIColor { .rgb(228, 102, 102) }
-    static var lightGreen: UIColor { .hex("#40B188") }
-    static var softYellow: UIColor { .rgb(255, 231, 186) }
+    static var softRed: UIColor { .hex("#E46666") }
+    static var softGreen: UIColor { .hex("#40B188") }
+    static var softYellow: UIColor { .hex("#FFE7BA") }
     static var tintBlue: UIColor { .hex("#4A90E2") }
     static var textBlack: UIColor { .hex("#333333") }
     static var textGray: UIColor { .hex("#666666") }
@@ -192,6 +192,18 @@ extension UIImage {
             let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: cornerRadius)
             color.setFill()
             path.fill()
+        }
+    }
+    
+    /// 把 orientation 烘焙进像素，得到 .up 的图（capInsets 才按「看见的」方向生效）
+    func lex_baked(orientation: Orientation) -> UIImage? {
+        guard let oriented = lex_image(with: orientation) else { return nil }
+        let size = oriented.size
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = oriented.scale
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            oriented.draw(in: .init(origin: .zero, size: size))
         }
     }
 
@@ -239,31 +251,37 @@ extension UIView {
     private func lex_updateBorderLayers(_ position: LEXBorderPosition) {
         (objc_getAssociatedObject(self, &lexBorderLayersKey) as? [CALayer])?.forEach { $0.removeFromSuperlayer() }
         var layers: [CALayer] = []
+        guard !position.isEmpty, bounds.width > 0.5, bounds.height > 0.5 else {
+            objc_setAssociatedObject(self, &lexBorderLayersKey, layers, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            return
+        }
         let color = UIColor(white: 0.85, alpha: 1).cgColor
-        func makeLayer() -> CALayer {
+        let line = CGFloat.pixelOne
+        func makeLayer(frame: CGRect) {
             let layer = CALayer()
             layer.backgroundColor = color
+            layer.frame = frame
             self.layer.addSublayer(layer)
             layers.append(layer)
-            return layer
         }
         if position.contains(.top) {
-            let layer = makeLayer()
-            layer.frame = CGRect(x: 0, y: 0, width: bounds.width, height: CGFloat.pixelOne)
+            makeLayer(frame: CGRect(x: 0, y: 0, width: bounds.width, height: line))
         }
         if position.contains(.bottom) {
-            let layer = makeLayer()
-            layer.frame = CGRect(x: 0, y: bounds.height - CGFloat.pixelOne, width: bounds.width, height: CGFloat.pixelOne)
+            makeLayer(frame: CGRect(x: 0, y: bounds.height - line, width: bounds.width, height: line))
         }
         if position.contains(.left) {
-            let layer = makeLayer()
-            layer.frame = CGRect(x: 0, y: 0, width: CGFloat.pixelOne, height: bounds.height)
+            makeLayer(frame: CGRect(x: 0, y: 0, width: line, height: bounds.height))
         }
         if position.contains(.right) {
-            let layer = makeLayer()
-            layer.frame = CGRect(x: bounds.width - CGFloat.pixelOne, y: 0, width: CGFloat.pixelOne, height: bounds.height)
+            makeLayer(frame: CGRect(x: bounds.width - line, y: 0, width: line, height: bounds.height))
         }
         objc_setAssociatedObject(self, &lexBorderLayersKey, layers, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+    }
+
+    /// 在 `layoutSubviews` 中调用，按最新 bounds 重建边线，避免列宽变化后残留旧竖线。
+    func lex_refreshBorderLayers() {
+        lex_updateBorderLayers(lex_borderPosition)
     }
 }
 
@@ -304,27 +322,68 @@ extension UIGestureRecognizer {
 // MARK: - Decimal
 
 extension Decimal {
-    var stringValue: String {
-        NSDecimalNumber(decimal: self).stringValue
+    /// 按 `NumberStyle` + locale 格式化为展示字符串。
+    public func formatted(_ style: DecimalLabel.NumberStyle, locale: Locale) -> String {
+        switch style {
+            case .none:
+                return formatPlain(locale: locale)
+            case let .decimal(fractionDigits):
+                return formatDecimal(locale: locale, fractionDigits: fractionDigits ?? ExcelTheme.defaultFractionDigits, grouping: true)
+            case let .currency(code):
+                return formatCurrency(locale: locale, code: code)
+            case let .percent(fractionDigits):
+                return formatPercent(locale: locale, fractionDigits: fractionDigits ?? ExcelTheme.defaultFractionDigits)
+            case let .custom(make):
+                return make(self, locale)
+        }
     }
 
-    var priceValue: String {
+    private func formatPlain(locale: Locale) -> String {
         let formatter = NumberFormatter()
+        formatter.locale = locale
         formatter.numberStyle = .decimal
-        formatter.maximumFractionDigits = 2
+        formatter.usesGroupingSeparator = false
+        formatter.minimumIntegerDigits = 1
         formatter.minimumFractionDigits = 0
-        return formatter.string(from: NSDecimalNumber(decimal: self)) ?? stringValue
+        formatter.maximumFractionDigits = ExcelTheme.noneMaximumFractionDigits
+        return formatter.string(from: self as NSDecimalNumber) ?? "\(self)"
     }
 
-    var priceValueForRMB: String {
-        "¥" + priceValue
-    }
-
-    var percentString: String {
+    private func formatDecimal(locale: Locale, fractionDigits: Int, grouping: Bool) -> String {
         let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .decimal
+        formatter.usesGroupingSeparator = grouping
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = fractionDigits
+        return formatter.string(from: self as NSDecimalNumber) ?? "\(self)"
+    }
+
+    private func formatCurrency(locale: Locale, code: String?) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = locale
+        formatter.numberStyle = .currency
+        if let code {
+            formatter.currencyCode = code
+        }
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = ExcelTheme.defaultFractionDigits
+        return formatter.string(from: self as NSDecimalNumber) ?? "\(self)"
+    }
+
+    private func formatPercent(locale: Locale, fractionDigits: Int) -> String {
+        let formatter = NumberFormatter()
+        formatter.locale = locale
         formatter.numberStyle = .percent
-        formatter.maximumFractionDigits = 2
-        return formatter.string(from: NSDecimalNumber(decimal: self)) ?? "\(stringValue)%"
+        formatter.minimumFractionDigits = 0
+        formatter.maximumFractionDigits = fractionDigits
+        return formatter.string(from: self as NSDecimalNumber) ?? "\(self)"
+    }
+}
+
+extension Optional where Wrapped == Decimal {
+    public func formatted(_ style: DecimalLabel.NumberStyle, locale: Locale) -> String? {
+        map { $0.formatted(style, locale: locale) }
     }
 }
 
