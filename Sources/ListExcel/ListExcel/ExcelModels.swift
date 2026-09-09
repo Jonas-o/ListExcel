@@ -94,7 +94,7 @@ extension Excel {
             }
         }
 
-        func contentWidth(with font: UIFont, configuration: Excel.Configuration = .init()) -> CGFloat? {
+        public func contentWidth(with font: UIFont, configuration: Excel.Configuration = .init()) -> CGFloat? {
             let horizontalPadding = configuration.cellPadding.horizontalValue
             let cellMargin = configuration.cellMargin
             let locale = configuration.locale

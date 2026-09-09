@@ -8,7 +8,7 @@
 import UIKit
 
 extension Excel {
-    public class IconTextCell: Cell {
+    open class IconTextCell: Cell {
         public enum IconStyle {
             case delete
             case clear
@@ -46,7 +46,7 @@ extension Excel {
             }
         }
 
-        public override func initSubviews() {
+        open override func initSubviews() {
             super.initSubviews()
             textLabel.resetAppearance()
             contentView.addSubview(textLabel)
@@ -57,13 +57,13 @@ extension Excel {
             iconPosition = .leading
         }
 
-        public override func applyAppearance() {
+        open override func applyAppearance() {
             super.applyAppearance()
             textLabel.textColor = appearance.textColor
             textLabel.font = appearance.font
         }
 
-        public override func bindContent(_ content: Content?, context: ContentBindContext = .init()) {
+        open override func bindContent(_ content: Content?, context: ContentBindContext = .init()) {
             guard case let .iconText(style, text) = content else { return }
             self.style = style
             textLabel.text = text
@@ -72,7 +72,7 @@ extension Excel {
             }
         }
 
-        public override func layoutSubviews() {
+        open override func layoutSubviews() {
             super.layoutSubviews()
             var paddingLeft = padding.left
             var paddingRight = padding.right

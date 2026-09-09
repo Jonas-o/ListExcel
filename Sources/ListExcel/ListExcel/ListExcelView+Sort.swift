@@ -14,4 +14,10 @@ extension ListExcelView {
         reloadHeader()
         didSortHeader()
     }
+
+    /// apply sort（不触发 `didSortAt`，避免回写循环）。
+    public func applySortColumn(_ column: Excel.SortColumn<T>?) {
+        sortColumn = column
+        reloadHeader()
+    }
 }

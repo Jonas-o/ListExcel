@@ -62,7 +62,7 @@ extension Excel {
             initSubviews()
         }
 
-        public override func prepareForReuse() {
+        open override func prepareForReuse() {
             super.prepareForReuse()
             initSubviews()
         }
