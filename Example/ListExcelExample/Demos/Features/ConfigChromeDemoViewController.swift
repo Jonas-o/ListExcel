@@ -65,8 +65,7 @@ final class ConfigChromeDemoViewController: UIViewController, ListExcelDataSourc
         configuration.excel.rowHeight = 44
         configuration.showsTotalView = true
         configuration.showsSortHint = true
-        listView.configuration = configuration
-        listView.applyConfiguration()
+        listView.applyConfiguration(configuration)
         listView.delegate = self
         listView.setHeaders(ChromeHeader.allCases)
         view.addSubview(listView)

@@ -104,8 +104,7 @@ final class OrphanRowsDemoViewController: UIViewController, ListExcelDataSource,
         configuration.excel.headerHeight = 40
         configuration.excel.rowHeight = 44
         configuration.showsTotalView = true
-        listView.configuration = configuration
-        listView.applyConfiguration()
+        listView.applyConfiguration(configuration)
         listView.delegate = self
         listView.setHeaders(OrphanHeader.allCases)
         view.addSubview(listView)

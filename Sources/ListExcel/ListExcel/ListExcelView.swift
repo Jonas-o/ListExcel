@@ -23,8 +23,8 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
 
     public weak var delegate: (any ListExcelDelegate<T>)?
 
-    /// 列表配置。修改后需调用 `applyConfiguration()` 才会刷新界面。
-    public var configuration: Configuration
+    /// 列表配置（对外只读）。写入请用 `applyConfiguration` / `mutateConfiguration` / `reload`。
+    public internal(set) var configuration: Configuration
 
     // 列宽权威结果（向上取整 / clamp 后）
     var widths: [CGFloat] = []
@@ -153,11 +153,19 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
         reloadData(immediate: true, widthPolicy: .recalculate)
     }
 
-    private func syncListChrome() {
+    /// 在当前配置上批改后调用 ``applyConfiguration(_:)``，适合宿主改若干字段。
+    public func mutateConfiguration(_ update: (inout Configuration) -> Void) {
+        var configuration = configuration
+        update(&configuration)
+        applyConfiguration(configuration)
+    }
+
+    func syncListChrome() {
         var excelConfiguration = configuration.excel
         // enlargeImageRows 时把解析后的行高写入引擎，避免再依赖 Delegate 属性
         excelConfiguration.rowHeight = configuration.resolvedRowHeight
         excelView.configuration = excelConfiguration
+        excelView.syncSelectionTypeToVisibleCells()
         clearSortButton.setTitle(configuration.resolvedClearSortTitle(), for: .normal)
         totalView.isHidden = !configuration.showsTotalView
         totalView.resetTotalText(configuration.resolvedTotalText(for: total))
@@ -197,14 +205,6 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
         excelView.contentView
     }
 
-    public var selectionType: Excel.SelectionType {
-        get { configuration.excel.selectionType }
-        set {
-            configuration.excel.selectionType = newValue
-            excelView.selectionType = newValue
-        }
-    }
-    
     public var headerView: UIView { excelView.headerView }
     public var footerView: UIView { excelView.footerView }
 

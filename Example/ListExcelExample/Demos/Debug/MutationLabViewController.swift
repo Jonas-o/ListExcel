@@ -74,11 +74,10 @@ final class MutationLabViewController: UIViewController, ListExcelDataSource, Li
         configuration.footerSumTitle = .custom("Footer")
         configuration.showsTotalView = true
         configuration.showsSortHint = true
+        configuration.excel.selectionType = .row()
 
-        listView.configuration = configuration
-        listView.applyConfiguration()
+        listView.applyConfiguration(configuration)
         listView.delegate = self
-        listView.selectionType = .row()
         listView.setHeaders(LabHeader.allCases)
         view.addSubview(listView)
     }

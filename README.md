@@ -183,23 +183,55 @@ listView.isLoading = false
 
 日常改数据优先用写入 API。需要整表重刷时再调用 `reloadData`；列宽策略（`.recalculate` / `.keep` / `.reconcile`）仅在该路径使用，细节见 API 注释。
 
+### `reload(_:)` 批量写入
+
+一次提交配置与数据的子集变更，内部只对齐一次 UI。`Batch.configuration` 预填当前值且**始终写回**；`headers` / `rowDatas` / `total` / `page` / `isLoading` 为 Optional，**仅赋值时才写入**；`clearsSelection` 控制是否清空选中（默认 `false`，若同时写了 `rowDatas` 则按 id 裁剪保留）。
+
+```swift
+listView.reload { batch in
+    batch.configuration.excel.selectionType = .row()
+    batch.rowDatas = nextPage
+    batch.total = totalCount
+    batch.page = page
+    batch.isLoading = false
+}
+```
+
+适合分页、切换选中模式等需要同时改配置与数据的场景；仅改配置时仍可用 `mutateConfiguration` / `applyConfiguration`。
+
 ## 配置
 
 布局与外观集中在 `ListExcelView.Configuration`（内含 `Excel.Configuration`）。  
-只改 `configuration` 字段不会自动生效，需再调用 `applyConfiguration()`。
+`configuration` 对外**只读**（`public internal(set)`），不能直接赋值；写入请用 `applyConfiguration` / `mutateConfiguration` / `reload`。
+
+选中模式仅存在于 `configuration.excel.selectionType`（`.none` / `.cell()` / `.row()` / `.rowSelection()`），不再有 `ListExcelView.selectionType` 顶层属性。
 
 ```swift
-listView.configuration.excel.rowHeight = 56
-listView.configuration.excel.leadingLockCount = 2
-listView.configuration.excel.locale = Excel.Locale.zhCN   // enUS / jaJP / current
-listView.configuration.footerSumTitle = .localeDefault   // 或 .custom("本页合计") / nil
-listView.configuration.totalText = .custom { "共 \($0) 条" }
+// 初始化或整份替换：
+var config = ListExcelView<OrderHeader>.Configuration()
+config.excel.rowHeight = 56
+config.excel.selectionType = .row()
+listView.applyConfiguration(config)
+
+listView.mutateConfiguration { config in
+    config.excel.leadingLockCount = 2
+    config.excel.locale = Excel.Locale.zhCN   // enUS / jaJP / current
+    config.footerSumTitle = .localeDefault   // 或 .custom("本页合计") / nil
+    config.totalText = .custom { "共 \($0) 条" }
+}
+
+// 运行时切换选中模式：
+listView.reload { $0.configuration.excel.selectionType = .cell() }
+
+// 无参重刷当前 configuration：
 listView.applyConfiguration()
 ```
 
 | API | 何时用 |
 |-----|--------|
-| `applyConfiguration` | 改了布局 / 外观 / locale / 文案类配置 |
+| `mutateConfiguration` | 在当前配置上改若干字段并刷新（推荐） |
+| `applyConfiguration` | 整份替换配置，或无参按当前值重刷 |
+| `reload(_:)` | 配置与 headers/rows/total/page/isLoading 批量提交 |
 | `reloadData` | 需要整表重刷（日常改数据优先用写入 API） |
 
 数字格式见 `NumberStyle`（`.decimal` / `.currency` / …）；内置文案随 `excel.locale` 的 language（zh / en / ja），`.custom` 优先。

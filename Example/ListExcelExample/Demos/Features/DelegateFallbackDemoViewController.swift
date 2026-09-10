@@ -41,8 +41,7 @@ final class DelegateFallbackDemoViewController: UIViewController, ListExcelDataS
         configuration.footerSumTitle = .custom("汇总(Delegate 回退)")
         configuration.showsTotalView = true
 
-        listView.configuration = configuration
-        listView.applyConfiguration()
+        listView.applyConfiguration(configuration)
         listView.delegate = self
         listView.setHeaders(FallbackHeader.allCases)
         listView.reset((0 ..< 15).map {

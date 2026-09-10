@@ -212,13 +212,113 @@ extension UIImage {
         return UIImage(cgImage: cgImage, scale: scale, orientation: orientation)
     }
 
+    /// 在限定尺寸内缩放图片，默认保持宽高比（AspectFit）。
+    /// - 结果尺寸不超过 `size`，AspectFit 时可能小于 `size`（不留白、不裁切）。
+    /// - 输出图的 `scale` 默认与原图一致。
     func lex_imageResized(inLimitedSize size: CGSize) -> UIImage? {
-        let format = UIGraphicsImageRendererFormat.default()
-        format.scale = scale
-        let renderer = UIGraphicsImageRenderer(size: size, format: format)
-        return renderer.image { _ in
-            draw(in: CGRect(origin: .zero, size: size))
+        lex_imageResized(inLimitedSize: size, resizingMode: .scaleAspectFit)
+    }
+
+    /// 在限定尺寸内按指定模式缩放；输出 `scale` 与原图一致。
+    func lex_imageResized(inLimitedSize size: CGSize, resizingMode: LEXImageResizingMode) -> UIImage? {
+        lex_imageResized(inLimitedSize: size, resizingMode: resizingMode, scale: scale)
+    }
+
+    /// 在限定尺寸内按指定模式与倍数缩放。
+    /// - Parameter size: 上限；实际输出取决于 `resizingMode`，但不会超过该值。
+    /// - Parameter resizingMode: 见 `LEXImageResizingMode`。
+    /// - Parameter scale: 输出图倍数；传原图 `scale` 可保持清晰度一致。
+    func lex_imageResized(
+        inLimitedSize size: CGSize,
+        resizingMode: LEXImageResizingMode,
+        scale: CGFloat
+    ) -> UIImage? {
+        let limit = size.lex_flat(scale: scale)
+        let imageSize = self.size
+        if limit == imageSize, scale == self.scale {
+            return self
         }
+        guard imageSize.width > 0, imageSize.height > 0, limit.width > 0, limit.height > 0 else {
+            return nil
+        }
+
+        let drawingRect: CGRect
+        let contextSize: CGSize
+
+        switch resizingMode {
+            case .scaleToFill:
+                drawingRect = .init(origin: .zero, size: limit)
+                contextSize = limit
+
+            case .scaleAspectFit, .scaleAspectFill, .scaleAspectFillTop, .scaleAspectFillBottom:
+                let horizontalRatio = limit.width / imageSize.width
+                let verticalRatio = limit.height / imageSize.height
+                let ratio: CGFloat = resizingMode == .scaleAspectFit
+                    ? min(horizontalRatio, verticalRatio)
+                    : max(horizontalRatio, verticalRatio)
+                let resized = CGSize(
+                    width: (imageSize.width * ratio).lex_flat(scale: scale),
+                    height: (imageSize.height * ratio).lex_flat(scale: scale)
+                )
+                contextSize = .init(
+                    min(limit.width, resized.width),
+                    min(limit.height, resized.height)
+                )
+                let originY: CGFloat
+                switch resizingMode {
+                    case .scaleAspectFillTop:
+                        originY = 0
+                    case .scaleAspectFillBottom:
+                        originY = contextSize.height - resized.height
+                    default:
+                        originY = (contextSize.height - resized.height) / 2
+                }
+                drawingRect = .init(
+                    x: (contextSize.width - resized.width) / 2,
+                    y: originY,
+                    width: resized.width,
+                    height: resized.height
+                )
+        }
+
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = scale
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: contextSize, format: format).image { _ in
+            draw(in: drawingRect)
+        }
+    }
+}
+
+/// 限定尺寸内的缩放策略。
+enum LEXImageResizingMode: Int {
+    /// 拉满目标尺寸，忽略宽高比（可能变形）。
+    case scaleToFill = 0
+    /// 保持宽高比，完整放入限定框；结果可能小于限定尺寸。
+    case scaleAspectFit = 10
+    /// 保持宽高比铺满限定框，超出部分居中裁切。
+    case scaleAspectFill = 20
+    /// 同 Fill，垂直方向贴顶裁切。
+    case scaleAspectFillTop = 21
+    /// 同 Fill，垂直方向贴底裁切。
+    case scaleAspectFillBottom = 22
+}
+
+private extension CGFloat {
+    /// 按指定倍数做像素取整，减少缩放后的发糊/缝隙。
+    func lex_flat(scale: CGFloat) -> CGFloat {
+        guard !isInfinite, self != .greatestFiniteMagnitude else { return self }
+        let s = scale > 0 ? scale : UIScreen.main.scale
+        let ceilPx = Darwin.ceil(self * s)
+        let roundPx = Darwin.round(self * s)
+        let px = abs(ceilPx - self * s) <= abs(roundPx - self * s) ? ceilPx : roundPx
+        return px / s
+    }
+}
+
+private extension CGSize {
+    func lex_flat(scale: CGFloat) -> CGSize {
+        .init(width.lex_flat(scale: scale), height.lex_flat(scale: scale))
     }
 }
 

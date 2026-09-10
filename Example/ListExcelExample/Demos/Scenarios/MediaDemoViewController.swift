@@ -94,11 +94,10 @@ final class MediaDemoViewController: UIViewController, ListExcelDataSource, List
         configuration.excel.leadingLockCount = 1
         configuration.showsTotalView = true
         configuration.showsSortHint = true
+        configuration.excel.selectionType = .row()
 
-        listView.configuration = configuration
-        listView.applyConfiguration()
+        listView.applyConfiguration(configuration)
         listView.delegate = self
-        listView.selectionType = .row()
         listView.setHeaders(MediaHeader.allCases)
         listView.reset(MediaFactory.rows())
         listView.total = listView.rowDatas.count

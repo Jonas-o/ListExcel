@@ -35,8 +35,8 @@ final class PureExcelDemoViewController: UIViewController, ExcelDelegate {
         configuration.leadingLockCount = 1
         configuration.trailingLockCount = 0
 
+        configuration.selectionType = .cell()
         let excel = Excel(delegate: self, configuration: configuration)
-        excel.selectionType = .cell()
         view.addSubview(excel)
         excelView = excel
         excel.reloadData()

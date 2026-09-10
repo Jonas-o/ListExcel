@@ -12,20 +12,56 @@ import UIKit
 class BaseTableViewCell: UITableViewCell {
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
-        selectionStyle = .none
-        backgroundColor = .clear
-        contentView.backgroundColor = .clear
+        initSelectedBackgroundView()
         initSubviews()
     }
 
     required init?(coder: NSCoder) {
         super.init(coder: coder)
+        initSelectedBackgroundView()
         initSubviews()
+    }
+    
+    func initSelectedBackgroundView() {
+        selectionStyle = .none
+        if selectedBackgroundView == nil {
+            selectedBackgroundView = UIView()
+        }
+        backgroundColor = .white
+        contentView.backgroundColor = .clear
+        if #available(iOS 15.0, *) {
+            focusEffect = nil
+        }
     }
 
     override func prepareForReuse() {
         super.prepareForReuse()
         initSubviews()
+    }
+
+    override func setSelected(_ selected: Bool, animated: Bool) {
+        super.setSelected(selected, animated: animated)
+        adjustHighlightedBackgroundColor(selected)
+    }
+
+    override func setHighlighted(_ highlighted: Bool, animated: Bool) {
+        super.setHighlighted(highlighted, animated: animated)
+        adjustHighlightedBackgroundColor(highlighted || isSelected)
+    }
+
+    /// 部分环境下系统不会把 `selectedBackgroundView` 挂进视图树，行选高亮会看不见；手动补上。
+    private func adjustHighlightedBackgroundColor(_ highlighted: Bool) {
+        guard highlighted, selectionStyle == .default, let selectedBackgroundView, selectedBackgroundView.superview == nil else {
+            return
+        }
+        selectedBackgroundView.isHidden = false
+        selectedBackgroundView.alpha = 1
+        if let backgroundView, backgroundView.superview == self {
+            insertSubview(selectedBackgroundView, aboveSubview: backgroundView)
+        } else {
+            insertSubview(selectedBackgroundView, at: 0)
+        }
+        super.layoutSubviews()
     }
 
     @objc func initSubviews() {}

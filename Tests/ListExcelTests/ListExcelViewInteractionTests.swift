@@ -74,7 +74,7 @@ final class ListExcelViewInteractionTests: XCTestCase {
         let (list, host, window) = TestListFactory.makeList()
         defer { window.isHidden = true }
 
-        list.selectionType = .cell()
+        list.reload { $0.configuration.excel.selectionType = .cell() }
         list.reset([TestIdentifiedRow(identifier: "1", name: "A", value: "1")])
         list.excel(list.excelView, didSelectRowAt: .cell(0), column: 1)
         XCTAssertEqual(host.didSelectRows.count, 1)
@@ -160,13 +160,13 @@ final class ListExcelViewInteractionTests: XCTestCase {
         XCTAssertEqual((list.rowDatas[1] as? TestIdentifiedRow)?.name, "B")
     }
 
-    func testSelectionTypeSetterUpdatesConfiguration() {
+    func testSelectionTypeViaReloadUpdatesConfiguration() {
         let (list, _, window) = TestListFactory.makeList()
         defer { window.isHidden = true }
 
-        list.selectionType = .cell()
-        XCTAssertTrue(list.selectionType.isCell)
-        list.selectionType = .row()
-        XCTAssertTrue(list.selectionType.isRow)
+        list.reload { $0.configuration.excel.selectionType = .cell() }
+        XCTAssertTrue(list.configuration.excel.selectionType.isCell)
+        list.reload { $0.configuration.excel.selectionType = .row() }
+        XCTAssertTrue(list.configuration.excel.selectionType.isRow)
     }
 }

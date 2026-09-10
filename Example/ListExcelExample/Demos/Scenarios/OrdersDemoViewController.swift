@@ -170,11 +170,10 @@ final class OrdersDemoViewController: UIViewController, ListExcelDataSource, Lis
         configuration.showsTotalView = true
         configuration.showsSortHint = true
         configuration.loadMoreThreshold = 120
+        configuration.excel.selectionType = .row()
 
-        listView.configuration = configuration
-        listView.applyConfiguration()
+        listView.applyConfiguration(configuration)
         listView.delegate = self
-        listView.selectionType = .row()
         listView.setHeaders(OrderHeader.allCases)
         listView.totalView.resetActionButton("回到顶部") { [weak self] _ in
             self?.listView.scrollToTop()

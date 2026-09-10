@@ -77,10 +77,10 @@ final class LocalRefreshDemoViewController: UIViewController, ListExcelDataSourc
         configuration.excel.rowHeight = 44
         configuration.excel.leadingLockCount = 1
         configuration.showsTotalView = true
-        listView.configuration = configuration
-        listView.applyConfiguration()
+        configuration.excel.selectionType = .cell()
+
+        listView.applyConfiguration(configuration)
         listView.delegate = self
-        listView.selectionType = .cell()
         listView.setHeaders(LocalHeader.allCases)
         view.addSubview(listView)
     }

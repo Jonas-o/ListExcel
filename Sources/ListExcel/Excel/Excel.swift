@@ -51,16 +51,8 @@ public class Excel: UIView {
     /// 各行横向滚动共享偏移；cell layout / willDisplay 据此回写，避免 frame 变更把 offset 冲掉。
     private(set) var currentOffset: CGFloat = 0
 
-    /// 布局 / 外观 / 行为配置。修改后需调用 `applyConfiguration()` 才会刷新界面。
-    public var configuration: Configuration
-
-    public var selectionType: SelectionType {
-        get { configuration.selectionType }
-        set {
-            configuration.selectionType = newValue
-            visibleTableViewCell.forEach { $0.selectionType = newValue }
-        }
-    }
+    /// 布局 / 外观 / 行为配置（对外只读）。写入请用 `applyConfiguration`。
+    public internal(set) var configuration: Configuration
 
     /// - Parameters:
     ///   - cellClasses: 覆盖默认 `ClassType` → Cell 映射（仅初始化生效，之后不可改）
@@ -116,7 +108,14 @@ public class Excel: UIView {
         if let configuration {
             self.configuration = configuration
         }
+        syncSelectionTypeToVisibleCells()
         reloadData()
+    }
+
+    /// 将 `configuration.selectionType` 同步到可见行 cell。
+    func syncSelectionTypeToVisibleCells() {
+        let type = configuration.selectionType
+        visibleTableViewCell.forEach { $0.selectionType = type }
     }
 
     public override func layoutSubviews() {
@@ -389,7 +388,7 @@ extension Excel: UITableViewDelegate, UITableViewDataSource {
         cell.columnWidths = columnWidths
         cell.dataSource = delegate
         cell.parentExcel = self
-        cell.selectionType = selectionType
+        cell.selectionType = configuration.selectionType
         cell.reloadData(currentOffset)
         cell.contentDidScrollOnHorizontal = { [weak self] cell, offset in
             self?.resetAllContentOffset(cell, offset: offset)
@@ -402,7 +401,7 @@ extension Excel: UITableViewDelegate, UITableViewDataSource {
     }
     
     public func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
-        selectionType.isRow
+        configuration.selectionType.isRow
     }
     
     public func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {

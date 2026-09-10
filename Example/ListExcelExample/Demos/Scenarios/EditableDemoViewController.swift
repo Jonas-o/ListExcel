@@ -105,11 +105,10 @@ final class EditableDemoViewController: UIViewController, ListExcelDataSource, L
         configuration.footerSumTitle = .localeDefault
         configuration.showsTotalView = true
         configuration.showsSortHint = true
+        configuration.excel.selectionType = .none
 
-        listView.configuration = configuration
-        listView.applyConfiguration()
+        listView.applyConfiguration(configuration)
         listView.delegate = self
-        listView.selectionType = .none
         listView.setHeaders(QuoteHeader.allCases)
         listView.reset(QuoteFactory.rows())
         listView.total = listView.rowDatas.count

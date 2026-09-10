@@ -147,7 +147,7 @@ extension ListExcelView {
         selectRows = selectRows.intersection(valid)
     }
 
-    private func applyResetDiff(_ rows: [any Excel.RowModel]) {
+    func applyResetDiff(_ rows: [any Excel.RowModel]) {
         let oldFingerprints = rowContentFingerprints
         let oldContributions = rowColumnWidths
         rowDatas = rows

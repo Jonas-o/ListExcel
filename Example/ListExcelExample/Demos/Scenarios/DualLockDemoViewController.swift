@@ -135,11 +135,10 @@ final class DualLockDemoViewController: UIViewController, ListExcelDataSource, L
         configuration.excel.trailingLockCount = 1
         configuration.showsTotalView = true
         configuration.showsSortHint = true
+        configuration.excel.selectionType = .cell()
 
-        listView.configuration = configuration
-        listView.applyConfiguration()
+        listView.applyConfiguration(configuration)
         listView.delegate = self
-        listView.selectionType = .cell()
         listView.setHeaders(StockHeader.allCases)
         view.addSubview(listView)
     }

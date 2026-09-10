@@ -18,7 +18,7 @@ extension ListExcelView {
         var selectColumn: Int?
         if case .select = content {
             selectColumn = column
-        } else if case .rowSelection = selectionType {
+        } else if case .rowSelection = configuration.excel.selectionType {
             // 找到第一个是选择类型的列
             let value = headers.enumerated().first {
                 if case .select = headerContent(at: $0.element, column: $0.offset) {

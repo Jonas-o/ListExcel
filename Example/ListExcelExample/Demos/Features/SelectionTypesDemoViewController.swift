@@ -62,10 +62,9 @@ final class SelectionTypesDemoViewController: UIViewController, ListExcelDataSou
         configuration.excel.rowHeight = 44
         configuration.excel.leadingLockCount = 1
         configuration.showsTotalView = true
-        listView.configuration = configuration
-        listView.applyConfiguration()
+        configuration.excel.selectionType = .row()
+        listView.applyConfiguration(configuration)
         listView.delegate = self
-        listView.selectionType = .row()
         listView.setHeaders(SelectDemoHeader.allCases)
         listView.reset((0 ..< 20).map {
             SelectDemoRow(identifier: "s-\($0)", title: "行 \($0 + 1)", value: "V\($0)")
@@ -92,10 +91,10 @@ final class SelectionTypesDemoViewController: UIViewController, ListExcelDataSou
 
     @objc private func typeChanged() {
         switch typeControl.selectedSegmentIndex {
-            case 0: listView.selectionType = .none
-            case 1: listView.selectionType = .cell()
-            case 2: listView.selectionType = .row()
-            default: listView.selectionType = .rowSelection()
+            case 0: listView.reload { $0.configuration.excel.selectionType = .none }
+            case 1: listView.reload { $0.configuration.excel.selectionType = .cell() }
+            case 2: listView.reload { $0.configuration.excel.selectionType = .row() }
+            default: listView.reload { $0.configuration.excel.selectionType = .rowSelection() }
         }
         logLabel.text = "当前 selectionType index=\(typeControl.selectedSegmentIndex)"
     }

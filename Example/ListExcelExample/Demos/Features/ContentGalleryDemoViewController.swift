@@ -91,11 +91,10 @@ final class ContentGalleryDemoViewController: UIViewController, ListExcelDataSou
         configuration.excel.footerHeight = 0
         configuration.showsTotalView = true
         configuration.showsSortHint = true
+        configuration.excel.selectionType = .cell()
 
-        listView.configuration = configuration
-        listView.applyConfiguration()
+        listView.applyConfiguration(configuration)
         listView.delegate = self
-        listView.selectionType = .cell()
         listView.setHeaders(GalleryHeader.allCases)
         listView.reset(Self.seed())
         listView.total = listView.rowDatas.count
