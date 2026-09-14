@@ -56,11 +56,7 @@ public class Excel: UIView {
 
     /// - Parameters:
     ///   - cellClasses: 覆盖默认 `ClassType` → Cell 映射（仅初始化生效，之后不可改）
-    public init(
-        delegate: any ExcelDelegate,
-        configuration: Configuration = .init(),
-        cellClasses: [Cell.ClassType: Cell.Type] = [:]
-    ) {
+    public init(delegate: any ExcelDelegate, configuration: Configuration = .init(), cellClasses: [Cell.ClassType: Cell.Type] = [:]) {
         self.delegate = delegate
         self.configuration = configuration
         cellRegisters = Cell.ClassType.allCases.map { type in

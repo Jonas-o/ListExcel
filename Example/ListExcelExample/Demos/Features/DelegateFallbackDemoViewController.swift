@@ -41,17 +41,17 @@ final class DelegateFallbackDemoViewController: UIViewController, ListExcelDataS
         configuration.footerSumTitle = .custom("汇总(Delegate 回退)")
         configuration.showsTotalView = true
 
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.delegate = self
-        listView.setHeaders(FallbackHeader.allCases)
-        listView.reset((0 ..< 15).map {
+        listView.reload { $0.headers = FallbackHeader.allCases }
+        listView.reload { $0.rowDatas = (0 ..< 15).map {
             FallbackRow(
                 identifier: "fb-\($0)",
                 code: String(format: "D%03d", $0 + 1),
                 title: "Delegate 行 \($0 + 1)",
                 amount: Decimal(($0 + 1) * 50)
             )
-        })
+        } }
         listView.total = listView.rowDatas.count
         listView.showNotice = "Header.content≡nil → contentAt / headerContent / footerSumTitle"
         view.addSubview(listView)

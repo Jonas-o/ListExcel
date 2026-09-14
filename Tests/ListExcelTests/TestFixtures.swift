@@ -60,6 +60,40 @@ struct SortProbeHeader: Excel.Header, Equatable {
     }
 }
 
+/// 图列宽探测：短 title，可选 min/max。
+struct ImageWidthProbeHeader: Excel.Header, Equatable {
+    let title: String
+    var minWidth: CGFloat?
+    var maxWidth: CGFloat
+
+    init(title: String = "X", minWidth: CGFloat? = nil, maxWidth: CGFloat = .greatestFiniteMagnitude) {
+        self.title = title
+        self.minWidth = minWidth
+        self.maxWidth = maxWidth
+    }
+
+    func content(for model: Excel.RowModel, row: Int) -> Excel.Content? {
+        .image
+    }
+}
+
+/// 权限 / filter 探测用 Header。
+struct PermissionProbeHeader: Excel.Header, Equatable {
+    let title: String
+    let sortBy: String
+    let hasPermission: Bool
+
+    init(title: String, sortBy: String = "", hasPermission: Bool = true) {
+        self.title = title
+        self.sortBy = sortBy
+        self.hasPermission = hasPermission
+    }
+
+    func content(for model: Excel.RowModel, row: Int) -> Excel.Content? {
+        .text((model as? TestIdentifiedRow)?.name)
+    }
+}
+
 struct TestIdentifiedRow: Excel.RowModel, Excel.ModelIdentifier {
     var identifier: String
     var name: String
@@ -203,7 +237,7 @@ enum TestListFactory {
         window.rootViewController = root
         window.makeKeyAndVisible()
 
-        list.setHeaders(headers)
+        list.reload { $0.headers = headers }
         return (list, host, window)
     }
 
@@ -223,11 +257,34 @@ enum TestListFactory {
         window.rootViewController = root
         window.makeKeyAndVisible()
 
-        list.setHeaders([
+        list.reload { $0.headers = [
             SortProbeHeader(title: "Col", sortKey: "k"),
             SortProbeHeader(title: "Col", sortKey: ""),
-        ])
+        ] }
         return (list, host, window)
+    }
+
+    @MainActor
+    static func makeImageWidthProbeList(
+        header: ImageWidthProbeHeader = .init(),
+        rowHeight: CGFloat = 44
+    ) -> (ListExcelView<ImageWidthProbeHeader>, UIWindow) {
+        var configuration = ListExcelView<ImageWidthProbeHeader>.Configuration()
+        configuration.excel.headerHeight = 44
+        configuration.excel.footerHeight = 0
+        configuration.excel.rowHeight = rowHeight
+        let list = ListExcelView<ImageWidthProbeHeader>(frame: .init(0, 0, 375, 667), configuration: configuration)
+
+        let window = UIWindow(frame: .init(0, 0, 375, 667))
+        let root = UIViewController()
+        root.view.addSubview(list)
+        list.frame = root.view.bounds
+        window.rootViewController = root
+        window.makeKeyAndVisible()
+
+        list.reload { $0.headers = [header] }
+        list.reload { $0.rowDatas = [TestIdentifiedRow(identifier: "1", name: "A", value: "1")] }
+        return (list, window)
     }
 
     @MainActor
@@ -255,7 +312,7 @@ enum TestListFactory {
         window.rootViewController = root
         window.makeKeyAndVisible()
 
-        list.setHeaders([.title, .amount])
+        list.reload { $0.headers = [.title, .amount] }
         return (list, host, window)
     }
 }

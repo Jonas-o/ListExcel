@@ -54,8 +54,8 @@ extension ListExcelView {
         if !header.sortBy.isEmpty, content?.targetClassType == .text {
             // 接管「排序」逻辑
             var type = Excel.OrderType.default
-            if let sortColumn, sortColumn.column == column {
-                switch sortColumn.type {
+            if isSortedHeader(header), let current = sortColumn?.type {
+                switch current {
                     case .none:
                         type = .default
                     case .ascending:
@@ -64,7 +64,7 @@ extension ListExcelView {
                         type = .ascending
                 }
             }
-            sortColumn = Excel.SortColumn(column: column, header: header, type: type)
+            sortColumn = Excel.SortColumn(header: header, type: type)
             reloadHeader()
             didSortHeader()
             return
@@ -72,9 +72,12 @@ extension ListExcelView {
         if content?.targetClassType == .iconText,
            let firstRowContent = genContent(at: .cell(0), column: column),
            firstRowContent.targetClassType == .image {
-            // 图片列头点击：切换行高
-            configuration.enlargeImageRows.toggle()
-            applyConfiguration()
+            // 图片列头点击：切换行高（需 supportsEnlargeImageRows）
+            guard configuration.supportsEnlargeImageRows else {
+                didSelectHeader(at: header, column: column)
+                return
+            }
+            mutateConfiguration { $0.enlargeImageRows.toggle() }
             return
         }
         switch content {
@@ -120,11 +123,7 @@ extension ListExcelView {
     }
 
     /// 触底加载判定（抽出便于单测；UIPan 在未激活态下 translation 常为 0）。
-    func triggerLoadMoreIfNeeded(
-        contentOffsetY: CGFloat,
-        viewportHeight: CGFloat,
-        panTranslationY: CGFloat
-    ) {
+    func triggerLoadMoreIfNeeded(contentOffsetY: CGFloat, viewportHeight: CGFloat, panTranslationY: CGFloat) {
         guard canLoadMore, !isLoading, rowDatas.count < total else { return }
         guard panTranslationY < 0 else { return }
         let tableHeaderViewHeight = tableView.tableHeaderView?.height ?? 0
@@ -136,5 +135,45 @@ extension ListExcelView {
                 self.canLoadMore = true
             }
         }
+    }
+
+    // MARK: - Sort / Headers visibility
+
+    /// 清除排序
+    public func clearSorts() {
+        sortColumn = nil
+        reloadHeader()
+        didSortHeader()
+    }
+
+    /// `hasPermission` + `customHeadersFilter` 投影可见列，并校验当前排序是否仍有效。
+    func applyHeaders(_ headers: [T]) {
+        self.headers = visibleHeaders(from: headers)
+        if let sortColumn, !containsSortColumn(sortColumn) {
+            self.sortColumn = nil
+        }
+    }
+
+    func visibleHeaders(from headers: [T]) -> [T] {
+        headers.filter(\.hasPermission).filter(customHeadersFilter)
+    }
+
+    /// 当前可见 `headers` 中是否存在与 `sort` 相同 `sortBy` 的可排序列。
+    func containsSortColumn(_ sort: Excel.SortColumn<T>) -> Bool {
+        columnIndex(forSortColumn: sort) != nil
+    }
+
+    /// 用 `header.sortBy` 反查可见列下标；`sortBy` 为空或不存在时返回 `nil`。
+    func columnIndex(forSortColumn sort: Excel.SortColumn<T>) -> Int? {
+        let key = sort.header.sortBy
+        guard !key.isEmpty else { return nil }
+        return headers.firstIndex { !$0.sortBy.isEmpty && $0.sortBy == key }
+    }
+
+    func isSortedHeader(_ header: T) -> Bool {
+        guard let sortColumn else { return false }
+        let key = sortColumn.header.sortBy
+        guard !key.isEmpty, !header.sortBy.isEmpty else { return false }
+        return key == header.sortBy
     }
 }

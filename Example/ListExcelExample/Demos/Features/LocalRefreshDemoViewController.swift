@@ -46,9 +46,9 @@ final class LocalRefreshDemoViewController: UIViewController, ListExcelDataSourc
         configureBar()
         configureList()
         layout()
-        listView.reset((0 ..< 30).map {
+        listView.reload { $0.rowDatas = (0 ..< 30).map {
             LocalRow(identifier: "l-\($0)", name: "R\($0)", a: "a\($0)", b: "b\($0)", c: "c\($0)")
-        })
+        } }
         listView.total = listView.rowDatas.count
         listView.showNotice = "用下方按钮做局部刷新 / 定位"
     }
@@ -79,9 +79,9 @@ final class LocalRefreshDemoViewController: UIViewController, ListExcelDataSourc
         configuration.showsTotalView = true
         configuration.excel.selectionType = .cell()
 
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.delegate = self
-        listView.setHeaders(LocalHeader.allCases)
+        listView.reload { $0.headers = LocalHeader.allCases }
         view.addSubview(listView)
     }
 
@@ -103,8 +103,10 @@ final class LocalRefreshDemoViewController: UIViewController, ListExcelDataSourc
     @objc private func reloadOneCell() {
         guard var row = listView.rowDatas.first as? LocalRow else { return }
         row.a = "A@\(Int(Date().timeIntervalSince1970) % 1000)"
-        // 先改数据再局部刷：用 update 同步缓存，再演示 reloadCell
-        listView.update(at: 0, row)
+        // 先改数据再局部刷：用 reload 同步缓存，再演示 reloadCell
+        var rows = listView.rowDatas
+        rows[0] = row
+        listView.reload { $0.rowDatas = rows }
         listView.reloadCell(at: .init(column: 1, row: .cell(0)))
         listView.showNotice = "reloadCell (0, a)"
     }
@@ -115,8 +117,10 @@ final class LocalRefreshDemoViewController: UIViewController, ListExcelDataSourc
         var r2 = listView.rowDatas[2] as! LocalRow
         r1.b = "B*"
         r2.c = "C*"
-        listView.update(at: 1, r1)
-        listView.update(at: 2, r2)
+        var rows = listView.rowDatas
+        rows[1] = r1
+        rows[2] = r2
+        listView.reload { $0.rowDatas = rows }
         listView.reloadCells(at: [
             .init(column: 2, row: .cell(1)),
             .init(column: 3, row: .cell(2)),

@@ -107,10 +107,10 @@ final class EditableDemoViewController: UIViewController, ListExcelDataSource, L
         configuration.showsSortHint = true
         configuration.excel.selectionType = .none
 
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.delegate = self
-        listView.setHeaders(QuoteHeader.allCases)
-        listView.reset(QuoteFactory.rows())
+        listView.reload { $0.headers = QuoteHeader.allCases }
+        listView.reload { $0.rowDatas = QuoteFactory.rows() }
         listView.total = listView.rowDatas.count
         listView.showNotice = "编辑数量/备注后失焦即 replace"
         view.addSubview(listView)
@@ -169,7 +169,15 @@ final class EditableDemoViewController: UIViewController, ListExcelDataSource, L
                     default:
                         return
                 }
-                _ = self.listView.replace(row)
+                self.listView.reload { batch in
+                    var rows = self.listView.rowDatas
+                    if let index = rows.firstIndex(where: {
+                        ($0 as? Excel.ModelIdentifier)?.identifier == row.identifier
+                    }) {
+                        rows[index] = row
+                        batch.rowDatas = rows
+                    }
+                }
                 self.refreshSummary()
                 self.listView.showNotice = "已写回 \(row.name)"
             }
@@ -185,7 +193,7 @@ final class EditableDemoViewController: UIViewController, ListExcelDataSource, L
             case .subtotal: rows.sort { asc ? $0.subtotal < $1.subtotal : $0.subtotal > $1.subtotal }
             default: return
         }
-        listView.reset(rows)
+        listView.reload { $0.rowDatas = rows }
         refreshSummary()
     }
 }

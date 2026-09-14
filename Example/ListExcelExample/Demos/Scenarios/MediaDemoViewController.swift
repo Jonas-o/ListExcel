@@ -90,16 +90,17 @@ final class MediaDemoViewController: UIViewController, ListExcelDataSource, List
         configuration.excel.headerHeight = 44
         configuration.excel.footerHeight = 0
         configuration.excel.rowHeight = 44
-        configuration.excel.enlargedRowHeight = 72
+        configuration.enlargedRowHeight = 72
         configuration.excel.leadingLockCount = 1
         configuration.showsTotalView = true
         configuration.showsSortHint = true
         configuration.excel.selectionType = .row()
+        configuration.supportsEnlargeImageRows = true
 
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.delegate = self
-        listView.setHeaders(MediaHeader.allCases)
-        listView.reset(MediaFactory.rows())
+        listView.reload { $0.headers = MediaHeader.allCases }
+        listView.reload { $0.rowDatas = MediaFactory.rows() }
         listView.total = listView.rowDatas.count
         listView.showNotice = "点封面列表头图标可切换放大行高"
         view.addSubview(listView)
@@ -114,19 +115,8 @@ final class MediaDemoViewController: UIViewController, ListExcelDataSource, List
     }
 
     @objc private func toggleRowHeight() {
-        // 与点 icon 表头等价
-        listView.configuration.enlargeImageRows.toggle()
-        listView.applyConfiguration()
+        listView.mutateConfiguration { $0.enlargeImageRows.toggle() }
         listView.showNotice = listView.configuration.enlargeImageRows ? "已放大行高" : "已恢复行高"
-    }
-
-    func listExcelView(
-        _ excelView: ListExcelView<MediaHeader>,
-        headerContentAt header: MediaHeader,
-        column: Int
-    ) -> Excel.Content? {
-        // 图片列头用 iconText，点击可切换 enlargeImageRows
-        header == .thumb ? .iconText(.delete, nil) : nil
     }
 
     func listExcelView(
@@ -162,7 +152,7 @@ final class MediaDemoViewController: UIViewController, ListExcelDataSource, List
             case .views: rows.sort { asc ? $0.views < $1.views : $0.views > $1.views }
             default: return
         }
-        listView.reset(rows)
+        listView.reload { $0.rowDatas = rows }
     }
 
     func listExcelView(

@@ -36,12 +36,20 @@ extension ListExcelView {
             case .header:
                 handleHeader(cell: cell, at: header, column: matrix.column)
                 if let sortColumn,
-                   sortColumn.column == matrix.column,
+                   isSortedHeader(header),
                    let cell = cell as? Excel.HeaderTextCell {
                     cell.orderType = sortColumn.type
                     if sortColumn.type != .none {
                         cell.textLabel.textAlignment = .left
                     }
+                }
+                // 包内注入的放大控件：图标靠右，标题在左
+                if configuration.supportsEnlargeImageRows,
+                   headerContent(at: header, column: matrix.column) == nil,
+                   let iconCell = cell as? Excel.IconTextCell,
+                   let first = genContent(at: .cell(0), column: matrix.column),
+                   first.targetClassType == .image {
+                    iconCell.iconPosition = .trailing
                 }
             case .footer:
                 handleFooter(cell: cell, at: header, column: matrix.column)
@@ -141,8 +149,13 @@ extension ListExcelView {
         let header = headers[column]
         switch row {
             case .header:
-                let content = headerContent(at: header, column: column)
-                return content ?? .text(header.title)
+                if let content = headerContent(at: header, column: column) {
+                    return content
+                }
+                if let enlargeHeader = makeEnlargeImageHeaderContent(at: column, header: header) {
+                    return enlargeHeader
+                }
+                return .text(header.title)
             case .footer where !rowDatas.isEmpty:
                 let content = footerContent(at: header, column: column)
                 if content == nil, column == 0, let footerSumTitle = configuration.resolvedFooterSumTitle() {
@@ -155,6 +168,17 @@ extension ListExcelView {
                 return header.content(for: model, row: row.rawValue) ?? content(at: Excel.CellUnion(row: index, column: column, header: header, rowModel: model))
             default: return nil
         }
+    }
+
+    /// 包内注入：支持放大 + 未自定义表头 + 首行为图片列 → icon + 标题。
+    func makeEnlargeImageHeaderContent(at column: Int, header: T) -> Excel.Content? {
+        guard configuration.supportsEnlargeImageRows, !rowDatas.isEmpty else { return nil }
+        guard let first = genContent(at: .cell(0), column: column), first.targetClassType == .image else {
+            return nil
+        }
+        let name = configuration.enlargeImageRows ? "lex_page_shrink" : "lex_page_full"
+        let image = UIImage.lex(name).lex_imageResized(inLimitedSize: .square(16)) ?? UIImage.lex(name)
+        return .iconText(.custom(image), header.title)
     }
 }
 

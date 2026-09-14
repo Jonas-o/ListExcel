@@ -92,4 +92,29 @@ final class ContentWidthTests: XCTestCase {
         XCTAssertNotNil(width)
         XCTAssertGreaterThan(width ?? 0, 0)
     }
+
+    func testIconTextWithoutLabelOmitsTitleSpacing() {
+        let iconOnly = Excel.Content.iconText(.delete, nil)
+            .contentWidth(with: font, configuration: configuration) ?? 0
+        let expected = Excel.IconTextCell.IconStyle.delete.image.size.width
+            + configuration.cellPadding.horizontalValue
+        XCTAssertEqual(iconOnly, expected, accuracy: 0.5)
+    }
+
+    func testCornerWidthIncludesHardcodedChrome() {
+        let leading = DecimalLabel.DecimalTuple(1, style: .none)
+        let trailing = DecimalLabel.DecimalTuple(2, style: .none)
+        let locale = configuration.locale
+        let cornerFont = Excel.CornerLabelMetrics.font
+        let textW = (leading.text(locale: locale).width(font: cornerFont)
+            + trailing.text(locale: locale).width(font: cornerFont))
+        let chrome = Excel.CornerLabelMetrics.horizontalInset * 2
+            + Excel.CornerLabelMetrics.dualGap
+        let width = Excel.Content.cornerText(
+            nil,
+            leadingCorner: leading,
+            trailingCorner: trailing
+        ).contentWidth(with: font, configuration: configuration) ?? 0
+        XCTAssertEqual(width, textW + chrome, accuracy: 0.5)
+    }
 }

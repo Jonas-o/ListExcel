@@ -63,12 +63,12 @@ final class SelectionTypesDemoViewController: UIViewController, ListExcelDataSou
         configuration.excel.leadingLockCount = 1
         configuration.showsTotalView = true
         configuration.excel.selectionType = .row()
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.delegate = self
-        listView.setHeaders(SelectDemoHeader.allCases)
-        listView.reset((0 ..< 20).map {
+        listView.reload { $0.headers = SelectDemoHeader.allCases }
+        listView.reload { $0.rowDatas = (0 ..< 20).map {
             SelectDemoRow(identifier: "s-\($0)", title: "行 \($0 + 1)", value: "V\($0)")
-        })
+        } }
         listView.total = listView.rowDatas.count
         view.addSubview(listView)
 

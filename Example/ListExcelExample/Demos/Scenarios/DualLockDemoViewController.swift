@@ -121,7 +121,7 @@ final class DualLockDemoViewController: UIViewController, ListExcelDataSource, L
         configureList()
         configureButtons()
         layout()
-        listView.reset(StockFactory.rows())
+        listView.reload { $0.rowDatas = StockFactory.rows() }
         listView.total = listView.rowDatas.count
         listView.showNotice = "左锁 SKU/品名 · 右锁操作 · 中间横滑"
     }
@@ -137,9 +137,9 @@ final class DualLockDemoViewController: UIViewController, ListExcelDataSource, L
         configuration.showsSortHint = true
         configuration.excel.selectionType = .cell()
 
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.delegate = self
-        listView.setHeaders(StockHeader.allCases)
+        listView.reload { $0.headers = StockHeader.allCases }
         view.addSubview(listView)
     }
 
@@ -199,7 +199,7 @@ final class DualLockDemoViewController: UIViewController, ListExcelDataSource, L
         let large = configuration.excel.rowFont.pointSize > 14
         configuration.excel.rowFont = .systemFont(ofSize: large ? 13 : 16)
         configuration.excel.headerFont = .systemFont(ofSize: large ? 13 : 16, weight: .medium)
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.showNotice = large ? "恢复默认字号（列宽重算）" : "放大字号并 invalidate 列宽"
     }
 
@@ -213,7 +213,7 @@ final class DualLockDemoViewController: UIViewController, ListExcelDataSource, L
             case .available: rows.sort { asc ? $0.available < $1.available : $0.available > $1.available }
             default: return
         }
-        listView.reset(rows)
+        listView.reload { $0.rowDatas = rows }
     }
 
     func listExcelView(

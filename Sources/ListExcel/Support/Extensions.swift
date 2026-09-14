@@ -228,11 +228,7 @@ extension UIImage {
     /// - Parameter size: 上限；实际输出取决于 `resizingMode`，但不会超过该值。
     /// - Parameter resizingMode: 见 `LEXImageResizingMode`。
     /// - Parameter scale: 输出图倍数；传原图 `scale` 可保持清晰度一致。
-    func lex_imageResized(
-        inLimitedSize size: CGSize,
-        resizingMode: LEXImageResizingMode,
-        scale: CGFloat
-    ) -> UIImage? {
+    func lex_imageResized(inLimitedSize size: CGSize, resizingMode: LEXImageResizingMode, scale: CGFloat) -> UIImage? {
         let limit = size.lex_flat(scale: scale)
         let imageSize = self.size
         if limit == imageSize, scale == self.scale {

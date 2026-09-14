@@ -86,7 +86,7 @@ final class DemoCatalogViewController: UITableViewController {
         Section(title: "调试", items: [
             Item(
                 title: "写入 API 实验室",
-                subtitle: "setHeaders / reset / append / update / replace / 列宽策略",
+                subtitle: "reload / append / 列宽策略",
                 make: { MutationLabViewController() }
             ),
         ]),

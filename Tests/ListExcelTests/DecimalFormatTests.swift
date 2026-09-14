@@ -39,16 +39,17 @@ final class LocalizedTextConfigurationTests: XCTestCase {
     func testFooterSumTitleNilHidesFallback() {
         let (list, _, window) = TestListFactory.makeExternalList(footerHeight: 44, footerSumTitle: nil)
         defer { window.isHidden = true }
-        list.reset([TestIdentifiedRow(identifier: "1", name: "n", value: "v")])
+        list.reload { $0.rowDatas = [TestIdentifiedRow(identifier: "1", name: "n", value: "v")] }
         XCTAssertNil(list.genContent(at: .footer, column: 0))
     }
 
     func testTotalTextNilHidesLabel() {
         let (list, _, window) = TestListFactory.makeList()
         defer { window.isHidden = true }
-        list.configuration.excel.locale = Excel.Locale.zhCN
-        list.configuration.totalText = nil
-        list.applyConfiguration()
+        list.mutateConfiguration {
+            $0.excel.locale = Excel.Locale.zhCN
+            $0.totalText = nil
+        }
         list.total = 9
         XCTAssertTrue(list.totalView.subviews.contains { view in
             (view as? UILabel)?.isHidden == true || list.configuration.resolvedTotalText(for: 9) == nil

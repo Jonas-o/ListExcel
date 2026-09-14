@@ -93,10 +93,10 @@ final class ContentGalleryDemoViewController: UIViewController, ListExcelDataSou
         configuration.showsSortHint = true
         configuration.excel.selectionType = .cell()
 
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.delegate = self
-        listView.setHeaders(GalleryHeader.allCases)
-        listView.reset(Self.seed())
+        listView.reload { $0.headers = GalleryHeader.allCases }
+        listView.reload { $0.rowDatas = Self.seed() }
         listView.total = listView.rowDatas.count
         listView.showNotice = "decimals / corner* / decimal(hiddenZero)"
         view.addSubview(listView)
@@ -143,7 +143,15 @@ final class ContentGalleryDemoViewController: UIViewController, ListExcelDataSou
         fieldCell.editingAction = { [weak self] _, field, event in
             guard let self, event == .editingDidEnd || event == .editingDidEndOnExit else { return }
             row.input = field.text ?? ""
-            _ = self.listView.replace(row)
+            self.listView.reload { batch in
+                var rows = self.listView.rowDatas
+                if let index = rows.firstIndex(where: {
+                    ($0 as? Excel.ModelIdentifier)?.identifier == row.identifier
+                }) {
+                    rows[index] = row
+                    batch.rowDatas = rows
+                }
+            }
             self.listView.showNotice = "cornerTextField 写回 \(row.name)"
         }
     }
@@ -153,6 +161,6 @@ final class ContentGalleryDemoViewController: UIViewController, ListExcelDataSou
         var rows = listView.rowDatas.compactMap { $0 as? GalleryRow }
         let asc = column.type == .ascending
         rows.sort { asc ? $0.name < $1.name : $0.name > $1.name }
-        listView.reset(rows)
+        listView.reload { $0.rowDatas = rows }
     }
 }

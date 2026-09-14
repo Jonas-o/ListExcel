@@ -14,7 +14,7 @@
 - 左右锁定列与横向同步滚动
 - 列排序、行多选、触底分页
 - 声明式列内容（`Excel.Content`）+ 可选 Delegate 回退
-- 写入 API 驱动的列宽增量计算（`reset` / `append` / `update` / `replace`）
+- 写入 API 驱动的列宽增量计算（`reload` / `append`）
 - 可替换 Cell 类型与自定义输入框
 
 ## 安装
@@ -77,16 +77,20 @@ final class OrdersController: UIViewController, ListExcelDelegate {
         listView.frame = view.bounds
         listView.delegate = self
 
-        listView.setHeaders(OrderHeader.allCases)
-        listView.reset([
-            OrderRow(identifier: "1", name: "A-100", amount: 12.5),
-            OrderRow(identifier: "2", name: "B-200", amount: 8),
-        ])
+        listView.reload { batch in
+            batch.headers = OrderHeader.allCases
+            batch.rowDatas = [
+                OrderRow(identifier: "1", name: "A-100", amount: 12.5),
+                OrderRow(identifier: "2", name: "B-200", amount: 8),
+            ]
+        }
     }
 }
 ```
 
 日常改数据请走写入 API，不要直接赋值 `headers` / `rowDatas`。
+
+`reload { $0.headers }` 写入时会按 `Header.hasPermission` 与初始化注入的 `customHeadersFilter` 投影可见列；`sortColumn` 仅保留 `header` + `type`，可经 `Batch.sortColumn` 恒写回，并用 `sortBy` 对齐当前可见列（不在可见集则自动清空）。
 
 ## 架构一览
 
@@ -94,7 +98,7 @@ final class OrdersController: UIViewController, ListExcelDelegate {
 |------|------|
 | `Excel` | 矩阵渲染引擎（`UITableView` + 锁列 `UICollectionView`） |
 | `ListExcelView<T>` | 业务列表层（`T: Excel.Header`）：列宽、排序、多选、分页、合计 |
-| `ExcelTotalView` | 底部合计 / 指示器 / 操作按钮 |
+| `ListExcelTotalView` | 底部合计 / 指示器 / 操作按钮 |
 
 Delegate 可按需组合，也可直接用别名 `ListExcelDelegate`：
 
@@ -157,21 +161,33 @@ Footer 第 0 列皆空且 `footerSumTitle != nil` 时显示合计标题（默认
 
 `Content` 负责选型与常规字段；图片等无法用 Content 表达的内容，在 `handleRow` / `handleHeader` / `handleFooter` 中配置。
 
+### 图片列放大行高
+
+```swift
+listView.mutateConfiguration {
+    $0.supportsEnlargeImageRows = true
+    $0.enlargedRowHeight = 72
+}
+```
+
+开启后：若未自定义 `headerContentAt`，且该列首行内容为 `.image`，包内会为表头注入 `.iconText(放大/缩小图标, header.title)`；点击即可切换 `enlargeImageRows`。宿主自定义表头时包不接管。
+
+图列宽会取 `max(表头/文字贡献…, resolvedRowHeight)`（`ImageCell` 无 padding），放大切换只轻量重算列宽，不清文字测宽缓存。
+
 ## 数据写入
 
 `headers` / `rowDatas` 对外只读。通过下列 API 修改（先更新数据与列宽，再刷新 UI）：
 
 | API | 作用 |
 |-----|------|
-| `setHeaders(_:)` | 换列定义；清空列宽缓存并全量重测；整表刷新 |
-| `reset(_:)` | 整表替换；列宽缓存 diff；`selectRows` 与新 id 交集保留 |
+| `reload { … }` | 批量写入 `headers` / `rowDatas` / 配置等；换列会清空列宽缓存并全量重测；换行会 diff 列宽缓存，`selectRows` 与新 id 交集保留（除非 `clearsSelection`） |
 | `append(_:)` | 尾部追加；只测新行；条件允许时 `insertRows` |
-| `update(at:_:)` | 按下标替换一行 |
-| `replace(_:)` | 按 `ModelIdentifier` 找第一个匹配行并 `update` |
+
+按下标或按 `ModelIdentifier` 改某一行时，在 `reload` 里改 `rowDatas` 副本再写回即可。
 
 ### 批量写入与 `isLoading`
 
-`isLoading == true` 时，写入 / `reloadData` / `applyConfiguration` 不立刻刷表，只记待对齐；设回 `false` 后以 `.keep` 整表刷新一次。
+`isLoading == true` 时，写入 / `reloadData` / `reload` 的表格刷新不立刻刷表，只记待对齐；设回 `false` 后以 `.keep` 整表刷新一次。
 
 ```swift
 listView.isLoading = true
@@ -181,37 +197,48 @@ listView.page = page
 listView.isLoading = false
 ```
 
-日常改数据优先用写入 API。需要整表重刷时再调用 `reloadData`；列宽策略（`.recalculate` / `.keep` / `.reconcile`）仅在该路径使用，细节见 API 注释。
+日常改数据优先用写入 API。需要强制重测列宽并整表刷新时再调用无参 `reloadData()`。
 
 ### `reload(_:)` 批量写入
 
-一次提交配置与数据的子集变更，内部只对齐一次 UI。`Batch.configuration` 预填当前值且**始终写回**；`headers` / `rowDatas` / `total` / `page` / `isLoading` 为 Optional，**仅赋值时才写入**；`clearsSelection` 控制是否清空选中（默认 `false`，若同时写了 `rowDatas` 则按 id 裁剪保留）。
+一次提交配置与数据的子集变更，内部只对齐一次 UI。`Batch.configuration` / `Batch.sortColumn` 预填当前值且**始终写回**；`headers` / `rowDatas` / `total` / `page` / `isLoading` 为 Optional，**仅赋值时才写入**；`clearsSelection` 控制是否清空选中（默认 `false`，若同时写了 `rowDatas` 则按 id 裁剪保留）。
 
 ```swift
 listView.reload { batch in
     batch.configuration.excel.selectionType = .row()
     batch.rowDatas = nextPage
+    batch.sortColumn = cachedSort
     batch.total = totalCount
     batch.page = page
     batch.isLoading = false
 }
 ```
 
-适合分页、切换选中模式等需要同时改配置与数据的场景；仅改配置时仍可用 `mutateConfiguration` / `applyConfiguration`。
+适合分页、切换选中模式等需要同时改配置与数据的场景。仅改配置用 `mutateConfiguration`（与 `reload` 共享提交路径：测宽字段未变则不整表重测）；需要强制按当前配置重测列宽时用无参 `reloadData()`。
 
 ## 配置
 
 布局与外观集中在 `ListExcelView.Configuration`（内含 `Excel.Configuration`）。  
-`configuration` 对外**只读**（`public internal(set)`），不能直接赋值；写入请用 `applyConfiguration` / `mutateConfiguration` / `reload`。
+`configuration` 对外**只读**（`public internal(set)`），不能直接赋值；写入请用 `mutateConfiguration` / `reload`。
 
 选中模式仅存在于 `configuration.excel.selectionType`（`.none` / `.cell()` / `.row()` / `.rowSelection()`），不再有 `ListExcelView.selectionType` 顶层属性。
+
+### `cellPadding` / `iconTitleSpacing`
+
+| 配置 | 作用范围 |
+|------|----------|
+| `excel.cellPadding` | 含 Label 的 cell 内边距（纯 Label，或 icon/排序图 + Label） |
+| `excel.iconTitleSpacing` | 仅当同一 cell 内图标（或排序图）与 title **同时存在**时的间距 |
+
+不适用：`ImageCell` / `SelectCell`（铺满 bounds）、TextField（`textRect` / 边框 inset）。  
+`CornerText` / `CornerTextField` 的角标用包内硬编码 metrics，不接入上述两项。
 
 ```swift
 // 初始化或整份替换：
 var config = ListExcelView<OrderHeader>.Configuration()
 config.excel.rowHeight = 56
 config.excel.selectionType = .row()
-listView.applyConfiguration(config)
+listView.reload { $0.configuration = config }
 
 listView.mutateConfiguration { config in
     config.excel.leadingLockCount = 2
@@ -220,19 +247,19 @@ listView.mutateConfiguration { config in
     config.totalText = .custom { "共 \($0) 条" }
 }
 
-// 运行时切换选中模式：
-listView.reload { $0.configuration.excel.selectionType = .cell() }
+// 运行时切换选中模式（不重测列宽）：
+listView.mutateConfiguration { $0.excel.selectionType = .cell() }
+// 等价：listView.reload { $0.configuration.excel.selectionType = .cell() }
 
-// 无参重刷当前 configuration：
-listView.applyConfiguration()
+// 强制按当前 configuration 重测列宽并刷新：
+listView.reloadData()
 ```
 
 | API | 何时用 |
 |-----|--------|
-| `mutateConfiguration` | 在当前配置上改若干字段并刷新（推荐） |
-| `applyConfiguration` | 整份替换配置，或无参按当前值重刷 |
-| `reload(_:)` | 配置与 headers/rows/total/page/isLoading 批量提交 |
-| `reloadData` | 需要整表重刷（日常改数据优先用写入 API） |
+| `mutateConfiguration` | 只改配置；测宽相关字段未变时轻量刷新 |
+| `reload(_:)` | 配置与 headers/rows/total/page/isLoading 批量提交，或整份替换 configuration |
+| `reloadData()` | 强制按当前配置重测列宽并整表刷新 |
 
 数字格式见 `NumberStyle`（`.decimal` / `.currency` / …）；内置文案随 `excel.locale` 的 language（zh / en / ja），`.custom` 优先。
 

@@ -9,7 +9,7 @@ import UIKit
 
 extension Excel {
     /// 表格全局配置（布局 / 外观 / 行为）。
-    /// 修改后需经 `Excel.applyConfiguration` 或 `ListExcelView.applyConfiguration` 生效。
+    /// 修改后需经 `Excel.applyConfiguration`，或 `ListExcelView` 的 `mutateConfiguration` / `reload` 生效。
     public struct Configuration {
         // MARK: Layout
 
@@ -22,16 +22,15 @@ extension Excel {
         public var footerHeight: CGFloat = ExcelTheme.footerHeight
         /// 普通内容行高。
         public var rowHeight: CGFloat = ExcelTheme.rowHeight
-        /// 放大行高（如封面图模式，由列表层 `enlargeImageRows` 选用）。
-        public var enlargedRowHeight: CGFloat = ExcelTheme.enlargedRowHeight
         /// 左侧锁定列数（不随中间区横滑）。
         public var leadingLockCount: Int = ExcelTheme.leadingLockCount
         /// 右侧锁定列数。
         public var trailingLockCount: Int = ExcelTheme.trailingLockCount
-        /// 单元格内边距（影响文案测宽与布局）。
+        /// 单元格内边距：用于含 Label 的 cell（纯 Label、或 icon/排序图 + Label）。
+        /// 不含：纯 `ImageCell` / `SelectCell`、以及 TextField（由 `textRect` / 边框 inset 自行控制）。
         public var cellPadding: UIEdgeInsets = ExcelTheme.cellPadding
-        /// 图标等与文案之间的额外间距（测宽用）。
-        public var cellMargin: CGFloat = ExcelTheme.cellMargin
+        /// 仅当同一 cell 内图标（或排序图）与 title 同时存在时，二者之间的间距。
+        public var iconTitleSpacing: CGFloat = ExcelTheme.iconTitleSpacing
 
         // MARK: Appearance
 
@@ -68,10 +67,10 @@ extension Excel {
     public struct Appearance {
         /// 与所属表格 `Configuration.locale` 一致，供数字格式化使用。
         public var locale: Foundation.Locale
-        /// 单元格内边距。
+        /// 单元格内边距（见 `Configuration.cellPadding` 适用范围）。
         public var padding: UIEdgeInsets
-        /// 图标与文案间距。
-        public var margin: CGFloat
+        /// 图标 / 排序图与 title 间距（见 `Configuration.iconTitleSpacing`）。
+        public var iconTitleSpacing: CGFloat
         /// 当前行对应字体（表头 / 行 / 表尾）。
         public var font: UIFont
         /// 主文字颜色。
@@ -87,21 +86,10 @@ extension Excel {
         /// 是否绘制列竖线（通常仅表头）。
         public var showsColumnLines: Bool
 
-        public init(
-            locale: Foundation.Locale,
-            padding: UIEdgeInsets,
-            margin: CGFloat,
-            font: UIFont,
-            textColor: UIColor,
-            accentColor: UIColor,
-            highlightColor: UIColor,
-            separatorColor: UIColor,
-            warnTextColor: UIColor,
-            showsColumnLines: Bool
-        ) {
+        public init(locale: Foundation.Locale, padding: UIEdgeInsets, iconTitleSpacing: CGFloat, font: UIFont, textColor: UIColor, accentColor: UIColor, highlightColor: UIColor, separatorColor: UIColor, warnTextColor: UIColor, showsColumnLines: Bool) {
             self.locale = locale
             self.padding = padding
-            self.margin = margin
+            self.iconTitleSpacing = iconTitleSpacing
             self.font = font
             self.textColor = textColor
             self.accentColor = accentColor
@@ -114,7 +102,7 @@ extension Excel {
         public init(configuration: Configuration, row: Matrix.Row) {
             locale = configuration.locale
             padding = configuration.cellPadding
-            margin = configuration.cellMargin
+            iconTitleSpacing = configuration.iconTitleSpacing
             switch row {
             case .header:
                 font = configuration.headerFont
@@ -130,5 +118,19 @@ extension Excel {
             warnTextColor = configuration.warnTextColor
             showsColumnLines = configuration.showsHeaderColumnLines && row.isHeader
         }
+    }
+}
+
+extension Excel.Configuration {
+    /// 是否与另一配置在「影响文字测宽 / fingerprint」的字段上一致。
+    func hasSameWidthMetrics(as other: Self) -> Bool {
+        locale.identifier == other.locale.identifier
+            && leadingLockCount == other.leadingLockCount
+            && trailingLockCount == other.trailingLockCount
+            && cellPadding == other.cellPadding
+            && iconTitleSpacing == other.iconTitleSpacing
+            && headerFont.isEqual(other.headerFont)
+            && rowFont.isEqual(other.rowFont)
+            && footerFont.isEqual(other.footerFont)
     }
 }

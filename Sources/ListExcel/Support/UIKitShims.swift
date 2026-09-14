@@ -27,7 +27,7 @@ class BaseTableViewCell: UITableViewCell {
         if selectedBackgroundView == nil {
             selectedBackgroundView = UIView()
         }
-        backgroundColor = .white
+        backgroundColor = .clear
         contentView.backgroundColor = .clear
         if #available(iOS 15.0, *) {
             focusEffect = nil
@@ -37,6 +37,13 @@ class BaseTableViewCell: UITableViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         initSubviews()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if let selectedBackgroundView, selectedBackgroundView.superview == self {
+            selectedBackgroundView.frame = bounds
+        }
     }
 
     override func setSelected(_ selected: Bool, animated: Bool) {
@@ -56,12 +63,12 @@ class BaseTableViewCell: UITableViewCell {
         }
         selectedBackgroundView.isHidden = false
         selectedBackgroundView.alpha = 1
+        selectedBackgroundView.frame = bounds
         if let backgroundView, backgroundView.superview == self {
             insertSubview(selectedBackgroundView, aboveSubview: backgroundView)
         } else {
             insertSubview(selectedBackgroundView, at: 0)
         }
-        super.layoutSubviews()
     }
 
     @objc func initSubviews() {}
@@ -109,24 +116,14 @@ class NormalButton: UIButton {
     }
 
     /// 使用 system 类型，保留系统按压高亮；指示器可用 `usesOriginalImage` 避免 tint 洗色。
-    convenience init(
-        title: String? = nil,
-        image: UIImage? = nil,
-        style: TintColorStyle = .green,
-        usesOriginalImage: Bool = false
-    ) {
+    convenience init(title: String? = nil, image: UIImage? = nil, style: TintColorStyle = .green, usesOriginalImage: Bool = false) {
         self.init(type: .system)
         applyStyle(style, title: title, image: image, usesOriginalImage: usesOriginalImage)
     }
 
     private static let imageTitleSpacing: CGFloat = 5
 
-    private func applyStyle(
-        _ style: TintColorStyle,
-        title: String?,
-        image: UIImage?,
-        usesOriginalImage: Bool
-    ) {
+    private func applyStyle(_ style: TintColorStyle, title: String?, image: UIImage?, usesOriginalImage: Bool) {
         self.style = style
         setTitle(title, for: .normal)
         if let image {

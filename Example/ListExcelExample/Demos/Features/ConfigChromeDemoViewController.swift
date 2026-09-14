@@ -65,9 +65,9 @@ final class ConfigChromeDemoViewController: UIViewController, ListExcelDataSourc
         configuration.excel.rowHeight = 44
         configuration.showsTotalView = true
         configuration.showsSortHint = true
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.delegate = self
-        listView.setHeaders(ChromeHeader.allCases)
+        listView.reload { $0.headers = ChromeHeader.allCases }
         view.addSubview(listView)
     }
 
@@ -86,35 +86,36 @@ final class ConfigChromeDemoViewController: UIViewController, ListExcelDataSourc
     }
 
     private func reloadSeed() {
-        listView.reset((0 ..< 12).map {
+        listView.reload { $0.rowDatas = (0 ..< 12).map {
             ChromeRow(identifier: "ch-\($0)", name: "项 \($0 + 1)", score: Decimal(60 + $0 * 3))
-        })
+        } }
         listView.total = listView.rowDatas.count
         listView.showNotice = "点分数表头看 sortHint；切换合计栏显隐"
     }
 
     @objc private func toggleTotal() {
-        listView.configuration.showsTotalView.toggle()
-        listView.applyConfiguration()
+        listView.mutateConfiguration { $0.showsTotalView.toggle() }
         listView.showNotice = listView.configuration.showsTotalView ? "showsTotalView=true" : "showsTotalView=false"
     }
 
     @objc private func applyCustomProviders() {
-        listView.configuration.totalText = .custom { "共 \($0) 条 · Demo" }
-        listView.configuration.sortHintText = .custom { column in
-            "排序:\(column.header.title)/\(column.type.rawValue)"
+        listView.mutateConfiguration { config in
+            config.totalText = .custom { "共 \($0) 条 · Demo" }
+            config.sortHintText = .custom { column in
+                "排序:\(column.header.title)/\(column.type.rawValue)"
+            }
+            config.clearSortTitle = .custom("清排序")
         }
-        listView.configuration.clearSortTitle = .custom("清排序")
-        listView.applyConfiguration()
         listView.total = listView.rowDatas.count
         listView.showNotice = "已套用自定义 total/sortHint"
     }
 
     @objc private func applyDefaultProviders() {
-        listView.configuration.totalText = .localeDefault
-        listView.configuration.sortHintText = .localeDefault
-        listView.configuration.clearSortTitle = .localeDefault
-        listView.applyConfiguration()
+        listView.mutateConfiguration { config in
+            config.totalText = .localeDefault
+            config.sortHintText = .localeDefault
+            config.clearSortTitle = .localeDefault
+        }
         listView.total = listView.rowDatas.count
         listView.showNotice = "已恢复默认 LocalizedText"
     }
@@ -124,6 +125,6 @@ final class ConfigChromeDemoViewController: UIViewController, ListExcelDataSourc
         var rows = listView.rowDatas.compactMap { $0 as? ChromeRow }
         let asc = column.type == .ascending
         rows.sort { asc ? $0.score < $1.score : $0.score > $1.score }
-        listView.reset(rows)
+        listView.reload { $0.rowDatas = rows }
     }
 }

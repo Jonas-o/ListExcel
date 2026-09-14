@@ -9,16 +9,16 @@ import XCTest
 @MainActor
 final class ListExcelViewRecommendedCoverageTests: XCTestCase {
 
-    // MARK: - 列宽 orphan / id 冲突 / setHeaders
+    // MARK: - 列宽 orphan / id 冲突 / reload headers
 
     func testPlainRowsStayInOrphanContributions() {
         let (list, _, window) = TestListFactory.makeList()
         defer { window.isHidden = true }
 
-        list.reset([
+        list.reload { $0.rowDatas = [
             TestPlainRow(name: "A", value: String(repeating: "1", count: 30)),
             TestPlainRow(name: "B", value: "2"),
-        ])
+        ] }
 
         XCTAssertTrue(list.rowColumnWidths.isEmpty)
         XCTAssertEqual(list.orphanRowContributions.count, 2)
@@ -30,9 +30,9 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         defer { window.isHidden = true }
 
         let key = ListExcelView<TestHeader>.RowWidthKey.modelId("dup")
-        list.reset([
+        list.reload { $0.rowDatas = [
             TestIdentifiedRow(identifier: "dup", name: "A", value: "1"),
-        ])
+        ] }
         XCTAssertNotNil(list.rowColumnWidths[key])
         XCTAssertTrue(list.orphanRowContributions.isEmpty)
 
@@ -48,9 +48,9 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         XCTAssertGreaterThan(list.widths[1], 40)
 
         // 1→2→1：只留一行唯一 id，重新进字典
-        list.reset([
+        list.reload { $0.rowDatas = [
             TestIdentifiedRow(identifier: "dup", name: "Solo", value: "9"),
-        ])
+        ] }
         XCTAssertNotNil(list.rowColumnWidths[key])
         XCTAssertTrue(list.orphanRowContributions.isEmpty)
     }
@@ -59,17 +59,16 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         let (list, _, window) = TestListFactory.makeList()
         defer { window.isHidden = true }
 
-        list.reset([
+        list.reload { $0.rowDatas = [
             TestIdentifiedRow(identifier: "old", name: "A", value: String(repeating: "X", count: 20)),
-        ])
+        ] }
         let oldKey = ListExcelView<TestHeader>.RowWidthKey.modelId("old")
         let newKey = ListExcelView<TestHeader>.RowWidthKey.modelId("new")
         XCTAssertNotNil(list.rowColumnWidths[oldKey])
 
-        list.update(
-            at: 0,
-            TestIdentifiedRow(identifier: "new", name: "B", value: String(repeating: "Y", count: 25))
-        )
+        var rows = list.rowDatas
+        rows[0] = TestIdentifiedRow(identifier: "new", name: "B", value: String(repeating: "Y", count: 25))
+        list.reload { $0.rowDatas = rows }
         XCTAssertNil(list.rowColumnWidths[oldKey])
         XCTAssertNotNil(list.rowColumnWidths[newKey])
         XCTAssertEqual(list.rowColumnWidths[newKey]?.keys.sorted(), [0, 1])
@@ -79,19 +78,19 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         let (list, _, window) = TestListFactory.makeList()
         defer { window.isHidden = true }
 
-        list.reset([
+        list.reload { $0.rowDatas = [
             TestIdentifiedRow(identifier: "1", name: "A", value: String(repeating: "Z", count: 30)),
-        ])
+        ] }
         let key = ListExcelView<TestHeader>.RowWidthKey.modelId("1")
         XCTAssertFalse(list.contentWidthCache.isEmpty)
         XCTAssertNotNil(list.rowColumnWidths[key])
         let oldWidths = list.widths
 
-        list.setHeaders([.value, .name, .select])
+        list.reload { $0.headers = [.value, .name, .select] }
         XCTAssertEqual(list.headers.count, 3)
         XCTAssertEqual(list.widths.count, 3)
         XCTAssertNotEqual(list.widths, oldWidths)
-        // setHeaders 会 invalidate 后全量重建
+        // reload headers 会 invalidate 后全量重建
         XCTAssertNotNil(list.rowColumnWidths[key])
         XCTAssertEqual(list.headerColumnWidths.count, 3)
     }
@@ -104,7 +103,7 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         // host 须强引用：list.delegate 为 weak
         XCTAssertTrue(host === list.delegate)
 
-        list.reset([TestIdentifiedRow(identifier: "1", name: "ignored", value: "ignored")])
+        list.reload { $0.rowDatas = [TestIdentifiedRow(identifier: "1", name: "ignored", value: "ignored")] }
         list.layoutIfNeeded()
         XCTAssertEqual(list.widths.count, 2)
         XCTAssertGreaterThan(list.widths[0], 0)
@@ -127,7 +126,7 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         }
         defer { window.isHidden = true }
 
-        list.reset([TestIdentifiedRow(identifier: "1", name: "n", value: "v")])
+        list.reload { $0.rowDatas = [TestIdentifiedRow(identifier: "1", name: "n", value: "v")] }
         let titleOnly = "title".width(font: list.configuration.excel.headerFont)
             + list.configuration.excel.cellPadding.horizontalValue
         XCTAssertGreaterThan(list.widths[0], titleOnly)
@@ -141,7 +140,7 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         defer { window.isHidden = true }
         _ = host
 
-        list.reset([TestIdentifiedRow(identifier: "1", name: "n", value: "v")])
+        list.reload { $0.rowDatas = [TestIdentifiedRow(identifier: "1", name: "n", value: "v")] }
         XCTAssertGreaterThan(list.footerColumnWidths[0] ?? 0, 40)
         XCTAssertGreaterThanOrEqual(list.widths[0], list.footerColumnWidths[0] ?? 0)
     }
@@ -152,10 +151,10 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         let (list, _, window) = TestListFactory.makeList(headers: [.name, .value, .select])
         defer { window.isHidden = true }
 
-        list.reset([
+        list.reload { $0.rowDatas = [
             TestIdentifiedRow(identifier: "1", name: "A", value: String(repeating: "V", count: 50)),
             TestIdentifiedRow(identifier: "2", name: "B", value: "2"),
-        ])
+        ] }
         list.widths = [60, 400, 44]
         list.reloadData(immediate: true, widthPolicy: .keep)
         list.layoutIfNeeded()
@@ -170,7 +169,7 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         defer { window.isHidden = true }
 
         host.footerByHeader[.value] = "100"
-        list.reset([TestIdentifiedRow(identifier: "1", name: "A", value: "1")])
+        list.reload { $0.rowDatas = [TestIdentifiedRow(identifier: "1", name: "A", value: "1")] }
         list.reloadHeader()
         list.reloadFooter()
         XCTAssertFalse(list.footerView.isHidden)
@@ -195,16 +194,14 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         let (list, _, window) = TestListFactory.makeList()
         defer { window.isHidden = true }
 
-        list.reset([
+        list.reload { $0.rowDatas = [
             TestIdentifiedRow(identifier: "1", name: "A", value: "1"),
             TestIdentifiedRow(identifier: "2", name: "B", value: "2"),
-        ])
-        list.configuration.showsTotalView = true
-        list.applyConfiguration()
+        ] }
+        list.mutateConfiguration { $0.showsTotalView = true }
         let withTotal = list.sizeThatFits(.init(375, 2000)).height
 
-        list.configuration.showsTotalView = false
-        list.applyConfiguration()
+        list.mutateConfiguration { $0.showsTotalView = false }
         let withoutTotal = list.sizeThatFits(.init(375, 2000)).height
 
         XCTAssertTrue(list.totalView.isHidden)
@@ -220,7 +217,7 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
 
         let r1 = TestIdentifiedRow(identifier: "1", name: "A", value: "1")
         let r2 = TestIdentifiedRow(identifier: "2", name: "B", value: "2")
-        list.reset([r1, r2])
+        list.reload { $0.rowDatas = [r1, r2] }
         list.select(.header)
         XCTAssertTrue(list.isSelected(.header))
         XCTAssertTrue(list.isSelected(.cell(0)))
@@ -237,7 +234,7 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         defer { window.isHidden = true }
 
         let r1 = TestIdentifiedRow(identifier: "1", name: "A", value: "1")
-        list.reset([r1, TestIdentifiedRow(identifier: "2", name: "B", value: "2")])
+        list.reload { $0.rowDatas = [r1, TestIdentifiedRow(identifier: "2", name: "B", value: "2")] }
         list.select(.cell(0))
         XCTAssertTrue(list.isSelected(r1))
         XCTAssertTrue(list.isSelected(.cell(0)))
@@ -252,7 +249,7 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         let (list, _, window) = TestListFactory.makeList()
         defer { window.isHidden = true }
 
-        list.reset([TestIdentifiedRow(identifier: "1", name: "A", value: "1")])
+        list.reload { $0.rowDatas = [TestIdentifiedRow(identifier: "1", name: "A", value: "1")] }
         list.layoutIfNeeded()
         XCTAssertEqual(list.tableView.numberOfRows(inSection: 0), 1)
 
@@ -278,13 +275,15 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         let (list, _, window) = TestListFactory.makeList()
         defer { window.isHidden = true }
 
-        list.reset([
+        list.reload { $0.rowDatas = [
             TestIdentifiedRow(identifier: "1", name: "A", value: "12"),
             TestIdentifiedRow(identifier: "2", name: "B", value: "34"),
-        ])
+        ] }
         list.layoutIfNeeded()
         let before = list.widths
-        list.update(at: 0, TestIdentifiedRow(identifier: "1", name: "A", value: "99"))
+        var rows = list.rowDatas
+        rows[0] = TestIdentifiedRow(identifier: "1", name: "A", value: "99")
+        list.reload { $0.rowDatas = rows }
         list.layoutIfNeeded()
         XCTAssertEqual(list.widths.count, before.count)
         XCTAssertEqual(list.tableView.numberOfRows(inSection: 0), 2)
@@ -298,13 +297,14 @@ final class ListExcelViewRecommendedCoverageTests: XCTestCase {
         let (list, _, window) = TestListFactory.makeList(headers: [.name, .value, .select])
         defer { window.isHidden = true }
 
-        list.configuration.excel.leadingLockCount = 1
-        list.configuration.excel.trailingLockCount = 1
-        list.applyConfiguration()
-        list.reset([
+        list.mutateConfiguration {
+            $0.excel.leadingLockCount = 1
+            $0.excel.trailingLockCount = 1
+        }
+        list.reload { $0.rowDatas = [
             TestIdentifiedRow(identifier: "1", name: "A", value: "1"),
             TestIdentifiedRow(identifier: "2", name: "B", value: "2"),
-        ])
+        ] }
         list.widths = [60, 500, 44]
         list.reloadData(immediate: true, widthPolicy: .keep)
         list.layoutIfNeeded()

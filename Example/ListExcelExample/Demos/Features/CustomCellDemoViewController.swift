@@ -68,12 +68,11 @@ final class CustomCellDemoViewController: UIViewController, ListExcelDataSource,
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
-        listView.applyConfiguration()
         listView.delegate = self
-        listView.setHeaders(CustomHeader.allCases)
-        listView.reset((0 ..< 16).map {
+        listView.reload { $0.headers = CustomHeader.allCases }
+        listView.reload { $0.rowDatas = (0 ..< 16).map {
             CustomRow(identifier: "c-\($0)", name: "自定义 Cell \($0 + 1)", note: "BadgeTextCell 替换 .text")
-        })
+        } }
         listView.total = listView.rowDatas.count
         listView.showNotice = "init(cellClasses: [.text: BadgeTextCell.self])"
         view.addSubview(listView)

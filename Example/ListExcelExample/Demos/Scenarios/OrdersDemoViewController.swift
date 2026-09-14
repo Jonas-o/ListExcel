@@ -172,9 +172,9 @@ final class OrdersDemoViewController: UIViewController, ListExcelDataSource, Lis
         configuration.loadMoreThreshold = 120
         configuration.excel.selectionType = .row()
 
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.delegate = self
-        listView.setHeaders(OrderHeader.allCases)
+        listView.reload { $0.headers = OrderHeader.allCases }
         listView.totalView.resetActionButton("回到顶部") { [weak self] _ in
             self?.listView.scrollToTop()
         }
@@ -216,7 +216,7 @@ final class OrdersDemoViewController: UIViewController, ListExcelDataSource, Lis
         listView.isLoading = true
         DemoNetwork.fetch({ OrderFactory.page(0, filter: self.filter) }) { [weak self] rows in
             guard let self else { return }
-            self.listView.reset(rows)
+            self.listView.reload { $0.rowDatas = rows }
             self.loadedCount = rows.count
             self.listView.isLoading = false
             self.refreshIndicators()
@@ -263,14 +263,16 @@ final class OrdersDemoViewController: UIViewController, ListExcelDataSource, Lis
             return
         }
         listView.isLoading = true
+        var rows = listView.rowDatas
         var changed = 0
-        for (index, model) in listView.rowDatas.enumerated() {
+        for (index, model) in rows.enumerated() {
             guard var order = model as? OrderRow, ids.contains(order.identifier) else { continue }
             order.amount += 50
             order.status = .shipping
-            listView.update(at: index, order)
+            rows[index] = order
             changed += 1
         }
+        listView.reload { $0.rowDatas = rows }
         listView.isLoading = false
         refreshIndicators()
         listView.reloadFooter()
@@ -285,7 +287,7 @@ final class OrdersDemoViewController: UIViewController, ListExcelDataSource, Lis
         }
         let remain = listView.rowDatas.compactMap { $0 as? OrderRow }.filter { !ids.contains($0.identifier) }
         listView.isLoading = true
-        listView.reset(remain)
+        listView.reload { $0.rowDatas = remain }
         listView.isLoading = false
         loadedCount = remain.count
         refreshIndicators()
@@ -347,7 +349,7 @@ final class OrdersDemoViewController: UIViewController, ListExcelDataSource, Lis
                 return
         }
         listView.isLoading = true
-        listView.reset(rows)
+        listView.reload { $0.rowDatas = rows }
         listView.isLoading = false
         listView.reloadFooter()
     }

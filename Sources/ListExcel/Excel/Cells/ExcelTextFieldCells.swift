@@ -82,6 +82,7 @@ extension Excel {
 
         public override func layoutSubviews() {
             super.layoutSubviews()
+            // TextField 不走 cellPadding，仅留 1px 边框空间；正文 inset 由 Field 自身 textRect 控制
             textField.frame = contentView.bounds.inset(by: .all(.pixelOne))
         }
     }
@@ -129,7 +130,6 @@ extension Excel {
             return field
         }()
 
-        public static var cornerFont: UIFont { UIFont.systemFont(ofSize: 12) }
         public let leadingCornerLabel = DecimalLabel()
         public let trailingCornerLabel = DecimalLabel()
 
@@ -152,7 +152,7 @@ extension Excel {
                 $0.resetAppearance()
                 $0.setDecimal([])
                 $0.warnStyle = .all
-                $0.font = Self.cornerFont
+                $0.font = CornerLabelMetrics.font
                 $0.isHidden = true
                 contentView.addSubview($0)
             }
@@ -190,22 +190,26 @@ extension Excel {
 
         public override func layoutSubviews() {
             super.layoutSubviews()
-            var cornerLabelWidth = contentView.width - 10
+            let inset = CornerLabelMetrics.horizontalInset
+            let gap = CornerLabelMetrics.dualGap
+            let y = CornerLabelMetrics.textFieldVerticalOffset
+            var cornerLabelWidth = contentView.width - inset * 2
             if !leadingCornerLabel.isHidden, !trailingCornerLabel.isHidden {
-                cornerLabelWidth = (cornerLabelWidth - 5) / 2
+                cornerLabelWidth = (cornerLabelWidth - gap) / 2
             }
             if !leadingCornerLabel.isHidden {
                 leadingCornerLabel.sizeToFit()
                 leadingCornerLabel.width = cornerLabelWidth
-                leadingCornerLabel.origin = .init(5, 1)
+                leadingCornerLabel.origin = .init(inset, y)
             }
             if !trailingCornerLabel.isHidden {
                 trailingCornerLabel.sizeToFit()
                 trailingCornerLabel.width = cornerLabelWidth
-                trailingCornerLabel.y = 1
-                trailingCornerLabel.right = contentView.width - 5
+                trailingCornerLabel.y = y
+                trailingCornerLabel.right = contentView.width - inset
             }
 
+            // TextField 不走 cellPadding，仅留 1px 边框空间；正文 inset 由 Field 自身 textRect 控制
             textField.frame = contentView.bounds.inset(by: .all(.pixelOne))
         }
     }

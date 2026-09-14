@@ -79,7 +79,7 @@ extension Excel {
         public var appearance = Appearance(configuration: .init(), row: .cell(0))
 
         public var padding: UIEdgeInsets { appearance.padding }
-        public var margin: CGFloat { appearance.margin }
+        public var iconTitleSpacing: CGFloat { appearance.iconTitleSpacing }
 
         public var showLineLayer = false {
             didSet {

@@ -8,6 +8,17 @@
 import UIKit
 
 extension Excel {
+    /// 角标 Label 专用布局（不接入 `cellPadding` / `iconTitleSpacing`，刻意贴边以多留正文空间）。
+    enum CornerLabelMetrics {
+        static let font = UIFont.systemFont(ofSize: 12)
+        static let horizontalInset: CGFloat = 5
+        static let dualGap: CGFloat = 5
+        /// `CornerTextFieldCell`：相对顶边下移，避免被 TextField border 盖住。
+        static let textFieldVerticalOffset: CGFloat = 1
+    }
+}
+
+extension Excel {
     open class TextCell: Cell {
         public let textLabel = DecimalLabel()
 
@@ -50,7 +61,6 @@ extension Excel {
     }
 
     public class CornerTextCell: Cell {
-        public static let cornerFont = UIFont.systemFont(ofSize: 12)
         public let textLabel = DecimalLabel()
         public let leadingCornerLabel = DecimalLabel()
         public let trailingCornerLabel = DecimalLabel()
@@ -66,7 +76,7 @@ extension Excel {
                 $0.resetAppearance()
                 $0.setDecimal([])
                 $0.warnStyle = .all
-                $0.font = Self.cornerFont
+                $0.font = CornerLabelMetrics.font
                 $0.isHidden = true
                 contentView.addSubview($0)
             }
@@ -115,20 +125,22 @@ extension Excel {
 
         public override func layoutSubviews() {
             super.layoutSubviews()
-            var cornerLabelWidth = contentView.width - 10
+            let inset = CornerLabelMetrics.horizontalInset
+            let gap = CornerLabelMetrics.dualGap
+            var cornerLabelWidth = contentView.width - inset * 2
             if !leadingCornerLabel.isHidden, !trailingCornerLabel.isHidden {
-                cornerLabelWidth = (cornerLabelWidth - 5) / 2
+                cornerLabelWidth = (cornerLabelWidth - gap) / 2
             }
             if !leadingCornerLabel.isHidden {
                 leadingCornerLabel.sizeToFit()
                 leadingCornerLabel.width = cornerLabelWidth
-                leadingCornerLabel.origin = .init(5, 0)
+                leadingCornerLabel.origin = .init(inset, 0)
             }
             if !trailingCornerLabel.isHidden {
                 trailingCornerLabel.sizeToFit()
                 trailingCornerLabel.width = cornerLabelWidth
                 trailingCornerLabel.y = 0
-                trailingCornerLabel.right = contentView.width - 5
+                trailingCornerLabel.right = contentView.width - inset
             }
 
             textLabel.frame = contentView.bounds.inset(by: padding)
@@ -188,7 +200,9 @@ extension Excel {
                 sortImageView.sizeToFit()
                 sortImageView.right = contentView.width - paddingRight
                 sortImageView.centerY = contentView.height / 2
-                paddingRight += sortImageView.width + margin
+                // 排序图与 title 同时存在时才计入间距
+                let hasTitle = !(textLabel.text ?? "").isEmpty
+                paddingRight += sortImageView.width + (hasTitle ? iconTitleSpacing : 0)
             }
             textLabel.frame = contentView.bounds.inset(by: padding.withRight(paddingRight))
         }

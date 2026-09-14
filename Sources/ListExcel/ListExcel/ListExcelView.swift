@@ -15,20 +15,23 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
         configuration: configuration.excel,
         cellClasses: cellClasses
     )
-    public let totalView = ExcelTotalView()
+    public let totalView = ListExcelTotalView()
     var canLoadMore = true
-    private let bottomNoticeLabel = UILabel()
-    private let currentSortLabel = UILabel()
-    private let clearSortButton = NormalButton(title: "")
+    let bottomNoticeLabel = UILabel()
+    let currentSortLabel = UILabel()
+    let clearSortButton = NormalButton(title: "")
 
     public weak var delegate: (any ListExcelDelegate<T>)?
 
-    /// 列表配置（对外只读）。写入请用 `applyConfiguration` / `mutateConfiguration` / `reload`。
+    /// 列表配置（对外只读）。写入请用 `mutateConfiguration` / `reload`。
     public internal(set) var configuration: Configuration
+
+    /// 在 `hasPermission` 之后的额外列过滤；仅初始化注入，之后不可改。
+    public let customHeadersFilter: (T) -> Bool
 
     // 列宽权威结果（向上取整 / clamp 后）
     var widths: [CGFloat] = []
-    // 列宽增量缓存（见 ListExcelView+ColumnWidthCache）
+    // 列宽增量缓存（见 ListExcelView+ColumnWidth）
     var contentWidthCache: [ContentWidthKey: CGFloat] = [:]
     var rowColumnWidths: [RowWidthKey: [Int: CGFloat]] = [:]
     var orphanRowContributions: [Int: [Int: CGFloat]] = [:]
@@ -43,11 +46,12 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
     }
 
     var pendingUIRefresh: PendingUIRefresh = .none
-    private var reloadDebouncer = Debouncer(interval: 0.1)
+    var reloadDebouncer = Debouncer(interval: 0.1)
+    /// 当前可见列（赋值路径会按 `hasPermission` + `customHeadersFilter` 过滤）。
     public internal(set) var headers: [T] = []
     public internal(set) var rowDatas: [any Excel.RowModel] = []
 
-    // Excel 布局（由 configuration 驱动）
+    // Excel 布局（由 configuration 驱动；锁列数经 clamp，保证 leading+trailing ≤ 列数）
     var leadingLockCount: Int { configuration.excel.leadingLockCount }
     var trailingLockCount: Int { configuration.excel.trailingLockCount }
     var headerHeight: CGFloat { configuration.excel.headerHeight }
@@ -62,7 +66,7 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
     }
 
     public var page: Int = 0
-    /// 分页 / 请求中为 `true` 时，写入 API / `reloadData` / `applyConfiguration` 的表格刷新会推迟到恢复为 `false`。
+    /// 分页 / 请求中为 `true` 时，写入 API / `reloadData` / `reload` 的表格刷新会推迟到恢复为 `false`。
     /// 推荐顺序：`isLoading = true` → `append`/`reset`/… → `isLoading = false`（结束走一次整表对齐）。
     public var isLoading = false {
         didSet {
@@ -82,6 +86,10 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
 
     public internal(set) var sortColumn: Excel.SortColumn<T>? {
         didSet {
+            if let sortColumn, !containsSortColumn(sortColumn) {
+                self.sortColumn = nil
+                return
+            }
             currentSortLabel.text = nil
             currentSortLabel.isHidden = true
             clearSortButton.isHidden = true
@@ -107,13 +115,11 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
 
     /// - Parameters:
     ///   - cellClasses: 覆盖默认 `ClassType` → Cell 映射（仅初始化生效，之后不可改）
-    public init(
-        frame: CGRect = .zero,
-        configuration: Configuration = .init(),
-        cellClasses: [Excel.Cell.ClassType: Excel.Cell.Type] = [:]
-    ) {
+    ///   - customHeadersFilter: `hasPermission` 之后的额外列过滤（仅初始化生效）
+    public init(frame: CGRect = .zero, configuration: Configuration = .init(), cellClasses: [Excel.Cell.ClassType: Excel.Cell.Type] = [:], customHeadersFilter: @escaping (T) -> Bool = { _ in true }) {
         self.configuration = configuration
         self.cellClasses = cellClasses
+        self.customHeadersFilter = customHeadersFilter
         super.init(frame: frame)
         addSubview(excelView)
         addSubview(totalView)
@@ -131,7 +137,7 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
         clearSortButton.lex_tapBlock = { [weak self] _ in
             self?.clearSorts()
         }
-        // 中间可横滑区域：排序提示 / 清除 / notice；左右由 ExcelTotalView 固定 action 与合计/指示器
+        // 中间可横滑区域：排序提示 / 清除 / notice；左右由 ListExcelTotalView 固定 action 与合计/指示器
         totalView.leadingAccessoryViews = [currentSortLabel, clearSortButton, bottomNoticeLabel]
         syncListChrome()
     }
@@ -139,42 +145,6 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
     @available(*, unavailable)
     public required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-
-    /// 应用配置并刷新表格。传入新配置会先写入 `configuration`；不传则用当前值。
-    /// 列表附属 UI（合计栏文案等）立即同步；表格刷新与 `reloadData` 相同，受 `isLoading` 门闩约束。
-    public func applyConfiguration(_ configuration: Configuration? = nil) {
-        if let configuration {
-            self.configuration = configuration
-        }
-        syncListChrome()
-        setNeedsLayout()
-        invalidateWidthCache()
-        reloadData(immediate: true, widthPolicy: .recalculate)
-    }
-
-    /// 在当前配置上批改后调用 ``applyConfiguration(_:)``，适合宿主改若干字段。
-    public func mutateConfiguration(_ update: (inout Configuration) -> Void) {
-        var configuration = configuration
-        update(&configuration)
-        applyConfiguration(configuration)
-    }
-
-    func syncListChrome() {
-        var excelConfiguration = configuration.excel
-        // enlargeImageRows 时把解析后的行高写入引擎，避免再依赖 Delegate 属性
-        excelConfiguration.rowHeight = configuration.resolvedRowHeight
-        excelView.configuration = excelConfiguration
-        excelView.syncSelectionTypeToVisibleCells()
-        clearSortButton.setTitle(configuration.resolvedClearSortTitle(), for: .normal)
-        totalView.isHidden = !configuration.showsTotalView
-        totalView.resetTotalText(configuration.resolvedTotalText(for: total))
-        bottomNoticeLabel.font = configuration.excel.rowFont
-        bottomNoticeLabel.textColor = configuration.excel.textColor.withAlphaComponent(0.6)
-        currentSortLabel.font = configuration.excel.rowFont
-        currentSortLabel.textColor = configuration.excel.textColor.withAlphaComponent(0.6)
-        let current = sortColumn
-        sortColumn = current
     }
 
     public override func layoutSubviews() {
@@ -227,64 +197,6 @@ public class ListExcelView<T>: UIView where T: Excel.Header {
         excelView.resetContentOffset()
     }
 
-    /// 刷新表格。宿主无参调用默认全量重算列宽（`.recalculate`）。
-    /// `isLoading == true` 时只标记待刷新，待加载结束后以 `.keep` 整表对齐。
-    /// - Parameter immediate: `true` 跳过防抖立刻执行；连续调用时默认防抖合并（0.1s）。
-    /// - Parameter widthPolicy: `.recalculate`（默认）/ `.keep` / `.reconcile`。
-    public func reloadData(immediate: Bool = false, widthPolicy: ColumnWidthPolicy = .recalculate) {
-        guard !isLoading else {
-            pendingUIRefresh = .fullReconcile
-            return
-        }
-        pendingUIRefresh = .none
-        reloadDebouncer.perform(immediate: immediate) { [weak self] in
-            guard let self else { return }
-            switch widthPolicy {
-                case .recalculate:
-                    self.calculateColumnWidths()
-                case .keep:
-                    if self.widths.count != self.headers.count {
-                        self.calculateColumnWidths()
-                    }
-                case .reconcile:
-                    self.measureHeaderFooter()
-                    self.recomputeWidthsFromRowContributions()
-            }
-            self.excelView.reloadData()
-        }
-    }
-
-    public func reloadHeader() {
-        excelView.reloadHeader()
-    }
-
-    public func reloadFooter() {
-        excelView.reloadFooter()
-    }
-    
-    /// 仅刷新内容，不涉及宽度变化
-    public func reloadCell(at matrix: Excel.Matrix) {
-        excelView.reloadCell(at: matrix)
-    }
-    
-    /// 仅刷新内容，不涉及宽度变化
-    public func reloadCells(at matrixs: [Excel.Matrix]) {
-        excelView.reloadCells(at: matrixs)
-    }
-
-    /// 单列重算并同步到 Excel。不完整重建行级增量缓存；需严格一致时请 `reloadData()`。
-    public func reloadCellWidth(_ column: Int, row: Excel.Matrix.Row? = nil) {
-        guard
-            widths.count == headers.count,
-            0 ..< widths.count ~= column
-        else {
-            reloadData(immediate: true, widthPolicy: .recalculate)
-            return
-        }
-        widths[column] = calculateColumnWidth(column)
-        excelView.reloadColumnWidth(column, reason: row)
-    }
-    
     public func scrollToColumn(at column: Int, animated: Bool = true) {
         excelView.scrollToColumn(at: column, animated: animated)
     }

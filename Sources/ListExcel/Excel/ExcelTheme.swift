@@ -16,7 +16,8 @@ enum ExcelTheme {
     static let leadingLockCount: Int = 1
     static let trailingLockCount: Int = 0
     static let cellPadding: UIEdgeInsets = .init(0, 8)
-    static let cellMargin: CGFloat = 8
+    /// 仅用于 icon / 排序图与 title 同时存在时的间距。
+    static let iconTitleSpacing: CGFloat = 8
 
     static let headerFont: UIFont = .defaultBold
     static let rowFont: UIFont = .default

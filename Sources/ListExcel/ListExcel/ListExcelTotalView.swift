@@ -1,5 +1,5 @@
 //
-//  ExcelTotalView.swift
+//  ListExcelTotalView.swift
 //  ListExcel
 //
 //  Copyright © 2026 ListExcel. All rights reserved.
@@ -7,7 +7,7 @@
 
 import UIKit
 
-public class ExcelTotalView: UIView {
+public class ListExcelTotalView: UIView {
     public enum Indicator {
         case yellow(String)
         case red(String)
@@ -246,14 +246,14 @@ public class ExcelTotalView: UIView {
     }
 }
 
-extension ExcelTotalView: UIScrollViewDelegate {
+extension ListExcelTotalView: UIScrollViewDelegate {
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         guard scrollView === accessoryScrollView else { return }
         reloadAccessoryEdgeShadows()
     }
 }
 
-extension ExcelTotalView {
+extension ListExcelTotalView {
     fileprivate func genButton(title: String) -> NormalButton {
         let button = NormalButton(title: title)
         button.setTitleColor(.softGreen, for: .normal)

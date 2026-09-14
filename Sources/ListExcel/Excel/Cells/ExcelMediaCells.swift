@@ -16,9 +16,9 @@ extension Excel {
 
             public var image: UIImage {
                 switch self {
-                case .delete: return UIImage.lex("excel_delete")
-                case .clear: return UIImage.lex("clear")
-                case let .custom(image): return image
+                    case .delete: return UIImage.lex("lex_delete")
+                    case .clear: return UIImage.lex("lex_clear")
+                    case let .custom(image): return image
                 }
             }
         }
@@ -79,13 +79,15 @@ extension Excel {
             if !iconImageView.isHidden {
                 iconImageView.sizeToFit()
                 iconImageView.centerY = contentView.height / 2
+                // 仅当 icon 与 title 同时存在时计入 `iconTitleSpacing`
+                let spacing = !(textLabel.text ?? "").isEmpty ? iconTitleSpacing : 0
                 switch iconPosition {
-                case .leading:
-                    iconImageView.x = paddingLeft
-                    paddingLeft += iconImageView.width + margin
-                case .trailing:
-                    iconImageView.right = contentView.width - paddingRight
-                    paddingRight += iconImageView.width + margin
+                    case .leading:
+                        iconImageView.x = paddingLeft
+                        paddingLeft += iconImageView.width + spacing
+                    case .trailing:
+                        iconImageView.right = contentView.width - paddingRight
+                        paddingRight += iconImageView.width + spacing
                 }
             }
             textLabel.frame = contentView.bounds.inset(by: .init(padding.top, paddingLeft, padding.bottom, paddingRight))
@@ -104,6 +106,7 @@ extension Excel {
 
         public override func layoutSubviews() {
             super.layoutSubviews()
+            // 纯 image：不走 cellPadding，铺满 contentView
             imageView.frame = contentView.bounds
         }
     }
@@ -115,10 +118,10 @@ extension Excel {
 
             public var image: UIImage {
                 switch self {
-                case let .square(isSelected):
-                    return UIImage.lex(isSelected ? "switch_on" : "switch_off")
-                case let .circle(isSelected):
-                    return UIImage.lex(isSelected ? "round_selected" : "round_unselected")
+                    case let .square(isSelected):
+                        return UIImage.lex(isSelected ? "lex_switch_on" : "lex_switch_off")
+                    case let .circle(isSelected):
+                        return UIImage.lex(isSelected ? "lex_round_selected" : "lex_round_unselected")
                 }
             }
         }
@@ -147,6 +150,7 @@ extension Excel {
 
         public override func layoutSubviews() {
             super.layoutSubviews()
+            // 纯选中图：不走 cellPadding，铺满 contentView
             imageView.frame = contentView.bounds
         }
     }

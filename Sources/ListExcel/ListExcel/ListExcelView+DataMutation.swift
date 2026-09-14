@@ -8,33 +8,7 @@
 import UIKit
 
 extension ListExcelView {
-    enum UIRefreshKind {
-        case append(from: Int)
-        case reset
-        case setHeaders
-        case update(index: Int)
-    }
-
-    /// 替换表头 / 列定义；必定 invalidate 列宽缓存并全量重测。
-    public func setHeaders(_ headers: [T]) {
-        self.headers = headers
-        invalidateWidthCache()
-        measureHeaderFooter()
-        rebuildAllRowWidthContributions()
-        recomputeWidthsFromRowContributions()
-        performUIRefresh(after: .setHeaders)
-    }
-
-    /// 整表替换；列宽缓存做 diff，不清空字典后盲目全扔。
-    public func reset(_ rows: [any Excel.RowModel]) {
-        applyResetDiff(rows)
-        pruneSelectRows(to: rows)
-        measureHeaderFooter()
-        recomputeWidthsFromRowContributions()
-        performUIRefresh(after: .reset)
-    }
-
-    /// 尾部追加；只测新行（并按需重测 footer）。
+    /// 尾部追加；只测新行（并按需重测 footer）。换列 / 整表替换 / 改单行请用 `reload`。
     public func append(_ rows: [any Excel.RowModel]) {
         guard !rows.isEmpty else { return }
         let oldCount = rowDatas.count
@@ -56,86 +30,22 @@ extension ListExcelView {
             measureFooterWidths()
         }
         recomputeWidthsFromRowContributions()
-        performUIRefresh(after: .append(from: oldCount))
+        performUIRefreshAfterAppend(from: oldCount)
     }
 
-    /// 按下标替换一行。
-    public func update(at index: Int, _ row: any Excel.RowModel) {
-        guard 0 ..< rowDatas.count ~= index else { return }
-        let oldModel = rowDatas[index]
-        let oldKey = rowWidthKey(for: oldModel)
-        let oldUnique = uniqueRowWidthKey(for: oldModel)
-
-        if let oldId = (oldModel as? Excel.ModelIdentifier)?.identifier,
-           let newId = (row as? Excel.ModelIdentifier)?.identifier,
-           oldId != newId {
-            selectRows.remove(oldId)
-        } else if oldModel is Excel.ModelIdentifier, !(row is Excel.ModelIdentifier),
-                  let oldId = (oldModel as? Excel.ModelIdentifier)?.identifier {
-            selectRows.remove(oldId)
-        }
-
-        rowDatas[index] = row
-        rebuildModelIdCounts()
-
-        if let oldUnique {
-            rowColumnWidths.removeValue(forKey: oldUnique)
-            rowContentFingerprints.removeValue(forKey: oldUnique)
-        } else if let oldKey {
-            rowColumnWidths.removeValue(forKey: oldKey)
-            rowContentFingerprints.removeValue(forKey: oldKey)
-        }
-        orphanRowContributions.removeValue(forKey: index)
-
-        demoteConflictingModelIdsFromDictionary()
-        _ = measureRow(row, index: index)
-
-        if uniqueRowWidthKey(for: row) == nil || needsOrphanRebuildAfterUpdate() {
-            rebuildOrphanRowContributions()
-        }
-
-        if footerHeight > 0 {
-            measureFooterWidths()
-        }
-        recomputeWidthsFromRowContributions()
-        performUIRefresh(after: .update(index: index))
-    }
-
-    /// 按业务 id 替换一行（取第一个匹配）。
-    @discardableResult
-    public func replace(_ row: some Excel.RowModel & Excel.ModelIdentifier) -> Bool {
-        guard let index = rowDatas.firstIndex(where: {
-            ($0 as? Excel.ModelIdentifier)?.identifier == row.identifier
-        }) else {
-            return false
-        }
-        update(at: index, row)
-        return true
-    }
-
-    func performUIRefresh(after kind: UIRefreshKind) {
+    /// `append` 专用 UI：可 `insertRows`；`isLoading` 时记待对齐。
+    func performUIRefreshAfterAppend(from: Int) {
         guard !isLoading else {
             pendingUIRefresh = .fullReconcile
             return
         }
         pendingUIRefresh = .none
-        switch kind {
-            case let .append(from):
-                let indexPaths = (from ..< rowDatas.count).map { IndexPath(row: $0, section: 0) }
-                excelView.insertRows(at: indexPaths, with: .none)
-                if footerHeight > 0 {
-                    reloadFooter()
-                }
-                refreshSelectHeaderIfNeeded()
-            case let .update(index):
-                excelView.reloadRows(at: [IndexPath(row: index, section: 0)], with: .none)
-                if footerHeight > 0 {
-                    reloadFooter()
-                }
-                refreshSelectHeaderIfNeeded()
-            case .reset, .setHeaders:
-                performResetStyleUIRefresh()
+        let indexPaths = (from ..< rowDatas.count).map { IndexPath(row: $0, section: 0) }
+        excelView.insertRows(at: indexPaths, with: .none)
+        if footerHeight > 0 {
+            reloadFooter()
         }
+        refreshSelectHeaderIfNeeded()
     }
 
     func performResetStyleUIRefresh() {
@@ -182,16 +92,12 @@ extension ListExcelView {
         }
     }
 
-    private func demoteConflictingModelIdsFromDictionary() {
+    func demoteConflictingModelIdsFromDictionary() {
         for (id, count) in modelIdCounts where count > 1 {
             let key = RowWidthKey.modelId(id)
             rowColumnWidths.removeValue(forKey: key)
             rowContentFingerprints.removeValue(forKey: key)
         }
-    }
-
-    private func needsOrphanRebuildAfterUpdate() -> Bool {
-        modelIdCounts.values.contains { $0 > 1 }
     }
 
     private func refreshSelectHeaderIfNeeded() {

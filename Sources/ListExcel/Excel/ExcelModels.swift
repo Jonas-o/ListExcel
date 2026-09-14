@@ -8,7 +8,85 @@
 import UIKit
 
 extension Excel {
-    // 支持缓存
+    /// 排序类型
+    public enum OrderType: String, Codable {
+        case none = ""
+        /// 升序
+        case ascending = "ASC"
+        /// 降序
+        case descending = "DESC"
+
+        public static var `default`: Self { .descending }
+    }
+
+    public struct Matrix {
+        public enum Row {
+            case header
+            case footer
+            case cell(Int)
+
+            public var rawValue: Int {
+                switch self {
+                    case .header: return -1
+                    case .footer: return -2
+                    case let .cell(value): return value
+                }
+            }
+
+            public var isHeader: Bool { rawValue == Row.header.rawValue }
+            public var isFooter: Bool { rawValue == Row.footer.rawValue }
+            public var isCell: Bool { rawValue >= 0 }
+        }
+
+        public let column: Int
+        public let row: Row
+
+        public init(column: Int, row: Row) {
+            self.column = column
+            self.row = row
+        }
+    }
+
+    /// Cell 的点击效果, 不包括 header & footer
+    public enum SelectionType {
+        case none
+        case cell(UIColor = UIColor(red: 247 / 255, green: 247 / 255, blue: 247 / 255, alpha: 1))
+        case row(UIColor = UIColor(red: 247 / 255, green: 247 / 255, blue: 247 / 255, alpha: 1))
+        /// 接管所有的 row 点击
+        case rowSelection(UIColor = UIColor(red: 247 / 255, green: 247 / 255, blue: 247 / 255, alpha: 1))
+
+        public var color: UIColor? {
+            switch self {
+                case let .cell(color), let .row(color), let .rowSelection(color):
+                    return color
+                default: return nil
+            }
+        }
+
+        public var isNone: Bool {
+            switch self {
+                case .none: return true
+                default: return false
+            }
+        }
+
+        public var isCell: Bool {
+            switch self {
+                case .cell: return true
+                default: return false
+            }
+        }
+
+        public var isRow: Bool {
+            switch self {
+                case .row, .rowSelection: return true
+                default: return false
+            }
+        }
+    }
+
+    // MARK: - Header / Content
+
     public protocol Header {
         /// 表头文案
         var title: String { get }
@@ -26,20 +104,18 @@ extension Excel {
         func content(for model: RowModel, row: Int) -> Content?
     }
 
-    /// 排序信息
+    /// 排序信息（以 `header.sortBy` 标识列；可见下标由当前 `headers` 反查）。
     public struct SortColumn<T> where T: Excel.Header {
-        public let column: Int
         public let header: T
         public let type: Excel.OrderType
 
-        public init(column: Int, header: T, type: Excel.OrderType) {
-            self.column = column
+        public init(header: T, type: Excel.OrderType) {
             self.header = header
             self.type = type
         }
     }
 
-    public protocol RowModel { }
+    public protocol RowModel {}
     public protocol ModelIdentifier {
         var identifier: String { get }
     }
@@ -96,18 +172,26 @@ extension Excel {
 
         public func contentWidth(with font: UIFont, configuration: Excel.Configuration = .init()) -> CGFloat? {
             let horizontalPadding = configuration.cellPadding.horizontalValue
-            let cellMargin = configuration.cellMargin
+            let iconTitleSpacing = configuration.iconTitleSpacing
             let locale = configuration.locale
+
+            func cornerChromeWidth(hasLeading: Bool, hasTrailing: Bool) -> CGFloat {
+                let metrics = Excel.CornerLabelMetrics.self
+                var chrome = metrics.horizontalInset * 2
+                if hasLeading, hasTrailing {
+                    chrome += metrics.dualGap
+                }
+                return chrome
+            }
+
             switch self {
                 case let .decimal(decimal, style, hiddenZero):
                     let text = DecimalLabel.DecimalTuple(decimal, style: style, hiddenZero: hiddenZero).text(locale: locale)
                     if !text.isEmpty {
-                        // 计算加上默认间隔（修改 Cell 间隔时此处需要变化）
                         return text.width(font: font) + horizontalPadding
                     }
                 case let .decimals(values):
                     if !values.isEmpty {
-                        // 计算加上默认间隔（修改 Cell 间隔时此处需要变化）
                         let widths = values.map { $0.text(locale: locale) }.map { $0.width(font: font) }
                         if let max = widths.max() {
                             return max + horizontalPadding
@@ -115,28 +199,32 @@ extension Excel {
                     }
                 case let .text(text):
                     if let text, !text.isEmpty {
-                        // 计算加上默认间隔（修改 Cell 间隔时此处需要变化）
                         return text.width(font: font) + horizontalPadding
                     }
                 case let .iconText(style, text):
+                    // 有 title：padding + iconTitleSpacing + icon；仅 icon：padding + icon（不加 spacing）
                     if let text, !text.isEmpty {
-                        // 计算加上默认间隔（修改 Cell 间隔时此处需要变化）
-                        return text.width(font: font) + horizontalPadding + cellMargin + style.image.size.width
+                        return text.width(font: font) + horizontalPadding + iconTitleSpacing + style.image.size.width
                     } else {
                         return style.image.size.width + horizontalPadding
                     }
                 case let .textField(text):
                     if let text, !text.isEmpty {
-                        // 计算加上默认间隔（修改 Cell 间隔时此处需要变化）
+                        // TextField 不走 cellPadding；预留输入态边距（与布局 pixelOne / textRect 对齐的经验值）
                         return text.width(font: font) + 24
                     }
                 case let .cornerText(text, leadingCorner, trailingCorner):
+                    let hasLeading = leadingCorner != nil
+                    let hasTrailing = trailingCorner != nil
                     var cornerContentWidth: CGFloat = 0
-                    if let width = leadingCorner?.text(locale: locale).width(font: CornerTextCell.cornerFont) {
+                    if let width = leadingCorner?.text(locale: locale).width(font: CornerLabelMetrics.font) {
                         cornerContentWidth += width
                     }
-                    if let width = trailingCorner?.text(locale: locale).width(font: CornerTextCell.cornerFont) {
+                    if let width = trailingCorner?.text(locale: locale).width(font: CornerLabelMetrics.font) {
                         cornerContentWidth += width
+                    }
+                    if cornerContentWidth > 0 {
+                        cornerContentWidth += cornerChromeWidth(hasLeading: hasLeading, hasTrailing: hasTrailing)
                     }
                     if let text, !text.isEmpty {
                         return max(text.width(font: font) + horizontalPadding, cornerContentWidth)
@@ -145,12 +233,17 @@ extension Excel {
                         return cornerContentWidth
                     }
                 case let .cornerDecimal(decimal, style, leadingCorner, trailingCorner):
+                    let hasLeading = leadingCorner != nil
+                    let hasTrailing = trailingCorner != nil
                     var cornerContentWidth: CGFloat = 0
-                    if let width = leadingCorner?.text(locale: locale).width(font: CornerTextCell.cornerFont) {
+                    if let width = leadingCorner?.text(locale: locale).width(font: CornerLabelMetrics.font) {
                         cornerContentWidth += width
                     }
-                    if let width = trailingCorner?.text(locale: locale).width(font: CornerTextCell.cornerFont) {
+                    if let width = trailingCorner?.text(locale: locale).width(font: CornerLabelMetrics.font) {
                         cornerContentWidth += width
+                    }
+                    if cornerContentWidth > 0 {
+                        cornerContentWidth += cornerChromeWidth(hasLeading: hasLeading, hasTrailing: hasTrailing)
                     }
                     if let text = decimal?.formatted(style, locale: locale), !text.isEmpty {
                         return max(text.width(font: font) + horizontalPadding, cornerContentWidth)
@@ -159,12 +252,17 @@ extension Excel {
                         return cornerContentWidth
                     }
                 case let .cornerTextField(text, leadingCorner, trailingCorner):
+                    let hasLeading = leadingCorner != nil
+                    let hasTrailing = trailingCorner != nil
                     var cornerContentWidth: CGFloat = 0
-                    if let width = leadingCorner?.text(locale: locale).width(font: Excel.DefaultCornerTextFieldCell.cornerFont) {
+                    if let width = leadingCorner?.text(locale: locale).width(font: CornerLabelMetrics.font) {
                         cornerContentWidth += width
                     }
-                    if let width = trailingCorner?.text(locale: locale).width(font: Excel.DefaultCornerTextFieldCell.cornerFont) {
+                    if let width = trailingCorner?.text(locale: locale).width(font: CornerLabelMetrics.font) {
                         cornerContentWidth += width
+                    }
+                    if cornerContentWidth > 0 {
+                        cornerContentWidth += cornerChromeWidth(hasLeading: hasLeading, hasTrailing: hasTrailing)
                     }
                     if let text, !text.isEmpty {
                         return max(text.width(font: font) + 24, cornerContentWidth)
@@ -199,5 +297,3 @@ extension Excel.SortColumn: Codable where T: Codable {}
 public extension Excel.Header where Self: RawRepresentable, RawValue == String {
     var title: String { rawValue }
 }
-
-

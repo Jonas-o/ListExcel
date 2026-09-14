@@ -25,7 +25,7 @@ extension ListExcelView {
     }
 
     /// 列表级配置（内含 `Excel.Configuration`）。
-    /// 修改后需调用 `applyConfiguration()` 才会刷新界面。
+    /// 写入请用 `mutateConfiguration` / `reload`；需要强制重测列宽时用 `reloadData()`。
     public struct Configuration {
         /// 底层表格引擎配置（布局 / 外观 / locale / 选中等）。
         public var excel = Excel.Configuration()
@@ -44,11 +44,15 @@ extension ListExcelView {
         /// 「清除排序」按钮标题；随排序提示一并显隐。
         public var clearSortTitle: LocalizedText = .localeDefault
 
-        /// 为 `true` 时内容行使用 `excel.enlargedRowHeight`（如媒体封面模式）。
+        /// 是否支持图片列放大行高（为 true 且未自定义表头时，包内注入可点击图标）。
+        public var supportsEnlargeImageRows: Bool = false
+        /// 当前是否处于放大行高（仅当 `supportsEnlargeImageRows` 为 true 时生效）。
         public var enlargeImageRows: Bool = false
+        /// 放大模式下的内容行高；普通模式仍用 `excel.rowHeight`。
+        public var enlargedRowHeight: CGFloat = ExcelTheme.enlargedRowHeight
         /// 是否在底栏展示排序提示与清除按钮（有 `sortColumn` 时才真正出现）。
         public var showsSortHint: Bool = ExcelTheme.showsSortHint
-        /// 是否展示底部合计栏（`ExcelTotalView`）。
+        /// 是否展示底部合计栏（`ListExcelTotalView`）。
         public var showsTotalView: Bool = ExcelTheme.showsTotalView
         /// 距底部多少 pt 内触发 loadMore 判定。
         public var loadMoreThreshold: CGFloat = ExcelTheme.loadMoreThreshold
@@ -87,7 +91,7 @@ extension ListExcelView {
 
         /// 当前应使用的内容行高（普通 / 放大）。
         public var resolvedRowHeight: CGFloat {
-            enlargeImageRows ? excel.enlargedRowHeight : excel.rowHeight
+            (supportsEnlargeImageRows && enlargeImageRows) ? enlargedRowHeight : excel.rowHeight
         }
     }
 }
@@ -108,11 +112,7 @@ extension ListExcelView.Configuration {
         }
     }
 
-    func resolve<Context>(
-        _ text: ListExcelView.LocalizedText.Source<Context>?,
-        context: Context,
-        localeDefault: (Context) -> String
-    ) -> String? {
+    func resolve<Context>(_ text: ListExcelView.LocalizedText.Source<Context>?, context: Context, localeDefault: (Context) -> String) -> String? {
         guard let text else { return nil }
         switch text {
             case .localeDefault: return localeDefault(context)
@@ -120,11 +120,7 @@ extension ListExcelView.Configuration {
         }
     }
 
-    func resolve<Context>(
-        _ text: ListExcelView.LocalizedText.Source<Context>,
-        context: Context,
-        localeDefault: (Context) -> String
-    ) -> String {
+    func resolve<Context>(_ text: ListExcelView.LocalizedText.Source<Context>, context: Context, localeDefault: (Context) -> String) -> String {
         switch text {
             case .localeDefault: return localeDefault(context)
             case let .custom(make): return make(context)

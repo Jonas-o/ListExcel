@@ -104,9 +104,9 @@ final class OrphanRowsDemoViewController: UIViewController, ListExcelDataSource,
         configuration.excel.headerHeight = 40
         configuration.excel.rowHeight = 44
         configuration.showsTotalView = true
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.delegate = self
-        listView.setHeaders(OrphanHeader.allCases)
+        listView.reload { $0.headers = OrphanHeader.allCases }
         view.addSubview(listView)
     }
 
@@ -125,30 +125,30 @@ final class OrphanRowsDemoViewController: UIViewController, ListExcelDataSource,
     }
 
     @objc private func seedMixed() {
-        listView.reset([
+        listView.reload { $0.rowDatas = [
             IdentRow(identifier: "1", name: "有 id", value: "10"),
             PlainRow(name: "无 id plain", value: "20"),
             ClassRow(name: "class 实例", value: "30"),
             IdentRow(identifier: "2", name: "有 id-2", value: "40"),
-        ])
+        ] }
         listView.total = listView.rowDatas.count
         listView.showNotice = "mixed: id + plain + class（后两者走 orphan）"
     }
 
     @objc private func seedDup() {
-        listView.reset([
+        listView.reload { $0.rowDatas = [
             IdentRow(identifier: "dup", name: "冲突 A", value: "1"),
             IdentRow(identifier: "dup", name: "冲突 B", value: String(repeating: "8", count: 18)),
             PlainRow(name: "plain", value: "x"),
-        ])
+        ] }
         listView.total = listView.rowDatas.count
         listView.showNotice = "同 id 冲突 → 字典降级 orphan"
     }
 
     @objc private func seedUnique() {
-        listView.reset([
+        listView.reload { $0.rowDatas = [
             IdentRow(identifier: "dup", name: "唯一", value: "solo"),
-        ])
+        ] }
         listView.total = 1
         listView.showNotice = "冲突解除，id 重回唯一字典"
     }

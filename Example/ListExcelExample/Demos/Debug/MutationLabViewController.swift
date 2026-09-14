@@ -76,9 +76,9 @@ final class MutationLabViewController: UIViewController, ListExcelDataSource, Li
         configuration.showsSortHint = true
         configuration.excel.selectionType = .row()
 
-        listView.applyConfiguration(configuration)
+        listView.reload { $0.configuration = configuration }
         listView.delegate = self
-        listView.setHeaders(LabHeader.allCases)
+        listView.reload { $0.headers = LabHeader.allCases }
         view.addSubview(listView)
     }
 
@@ -96,18 +96,16 @@ final class MutationLabViewController: UIViewController, ListExcelDataSource, Li
         actionsStack.spacing = 8
         actionsStack.alignment = .fill
         let buttons: [(String, Selector)] = [
-            ("reset 10 行", #selector(actReset)),
+            ("reload rowDatas 10 行", #selector(actReset)),
             ("append 5 行 (isLoading)", #selector(actAppend)),
-            ("update 第 0 行加长 value", #selector(actUpdate)),
-            ("replace 首个选中/首行", #selector(actReplace)),
-            ("setHeaders 去掉 note", #selector(actSetHeadersNarrow)),
-            ("setHeaders 恢复全列", #selector(actSetHeadersFull)),
-            ("reloadData .recalculate", #selector(actRecalculate)),
-            ("reloadData .keep", #selector(actKeep)),
-            ("reloadData .reconcile", #selector(actReconcile)),
+            ("reload 更新第 0 行加长 value", #selector(actUpdate)),
+            ("reload 按 id 替换首个选中/首行", #selector(actReplace)),
+            ("reload headers 去掉 note", #selector(actSetHeadersNarrow)),
+            ("reload headers 恢复全列", #selector(actSetHeadersFull)),
+            ("reloadData() 强制重测", #selector(actRecalculate)),
             ("reloadCellWidth(value)", #selector(actReloadCellWidth)),
             ("clearSelection / clearSorts", #selector(actClearMeta)),
-            ("制造重复 id 再 reset 唯一", #selector(actDuplicateId)),
+            ("制造重复 id 再 reload 唯一", #selector(actDuplicateId)),
         ]
         buttons.forEach { title, sel in
             let button = UIButton(type: .system)
@@ -152,7 +150,7 @@ final class MutationLabViewController: UIViewController, ListExcelDataSource, Li
     }
 
     private func seed() {
-        listView.reset(makeRows(count: 8, prefix: "seed"))
+        listView.reload { $0.rowDatas = makeRows(count: 8, prefix: "seed") }
         listView.total = listView.rowDatas.count
         log("seed \(listView.rowDatas.count) rows, cols=\(listView.numberOfColumns)")
     }
@@ -192,10 +190,10 @@ final class MutationLabViewController: UIViewController, ListExcelDataSource, Li
 
     @objc private func actReset() {
         listView.isLoading = true
-        listView.reset(makeRows(count: 10, prefix: "reset"))
+        listView.reload { $0.rowDatas = makeRows(count: 10, prefix: "reset") }
         listView.isLoading = false
         listView.total = listView.rowDatas.count
-        log("reset → \(snapshot())")
+        log("reload rowDatas → \(snapshot())")
     }
 
     @objc private func actAppend() {
@@ -210,8 +208,10 @@ final class MutationLabViewController: UIViewController, ListExcelDataSource, Li
         guard var row = listView.rowDatas.first as? LabRow else { return }
         row.value = String(repeating: "W", count: 40)
         row.note = "updated"
-        listView.update(at: 0, row)
-        log("update(0) long value → \(snapshot())")
+        var rows = listView.rowDatas
+        rows[0] = row
+        listView.reload { $0.rowDatas = rows }
+        log("reload update(0) long value → \(snapshot())")
     }
 
     @objc private func actReplace() {
@@ -221,33 +221,33 @@ final class MutationLabViewController: UIViewController, ListExcelDataSource, Li
         else { return }
         row.title = "替换\(seq)"
         row.value = "R\(seq)"
-        let ok = listView.replace(row)
-        log("replace(\(id)) ok=\(ok) → \(snapshot())")
+        var ok = false
+        listView.reload { batch in
+            var rows = listView.rowDatas
+            if let index = rows.firstIndex(where: {
+                ($0 as? Excel.ModelIdentifier)?.identifier == row.identifier
+            }) {
+                rows[index] = row
+                batch.rowDatas = rows
+                ok = true
+            }
+        }
+        log("reload replace(\(id)) ok=\(ok) → \(snapshot())")
     }
 
     @objc private func actSetHeadersNarrow() {
-        listView.setHeaders([.select, .code, .title, .value])
-        log("setHeaders narrow → \(snapshot())")
+        listView.reload { $0.headers = [.select, .code, .title, .value] }
+        log("reload headers narrow → \(snapshot())")
     }
 
     @objc private func actSetHeadersFull() {
-        listView.setHeaders(LabHeader.allCases)
-        log("setHeaders full → \(snapshot())")
+        listView.reload { $0.headers = LabHeader.allCases }
+        log("reload headers full → \(snapshot())")
     }
 
     @objc private func actRecalculate() {
-        listView.reloadData(immediate: true, widthPolicy: .recalculate)
-        log("reloadData .recalculate → \(snapshot())")
-    }
-
-    @objc private func actKeep() {
-        listView.reloadData(immediate: true, widthPolicy: .keep)
-        log("reloadData .keep → \(snapshot())")
-    }
-
-    @objc private func actReconcile() {
-        listView.reloadData(immediate: true, widthPolicy: .reconcile)
-        log("reloadData .reconcile → \(snapshot())")
+        listView.reloadData()
+        log("reloadData() → \(snapshot())")
     }
 
     @objc private func actReloadCellWidth() {
@@ -255,7 +255,9 @@ final class MutationLabViewController: UIViewController, ListExcelDataSource, Li
               var row = listView.rowDatas.first as? LabRow
         else { return }
         row.value = String(repeating: "Q", count: 28)
-        listView.update(at: 0, row)
+        var rows = listView.rowDatas
+        rows[0] = row
+        listView.reload { $0.rowDatas = rows }
         listView.reloadCellWidth(column)
         log("update+reloadCellWidth(value) → \(snapshot())")
     }
@@ -269,9 +271,9 @@ final class MutationLabViewController: UIViewController, ListExcelDataSource, Li
     @objc private func actDuplicateId() {
         let dup = LabRow(identifier: "dup", code: "DUP", title: "冲突A", value: "1", note: "a")
         let dup2 = LabRow(identifier: "dup", code: "DUP", title: "冲突B", value: String(repeating: "8", count: 20), note: "b")
-        listView.reset([dup, dup2])
+        listView.reload { $0.rowDatas = [dup, dup2] }
         log("duplicate id → \(snapshot())")
-        listView.reset([LabRow(identifier: "dup", code: "DUP", title: "唯一", value: "3", note: "solo")])
+        listView.reload { $0.rowDatas = [LabRow(identifier: "dup", code: "DUP", title: "唯一", value: "3", note: "solo")] }
         log("back to unique id → \(snapshot())")
     }
 
@@ -306,7 +308,7 @@ final class MutationLabViewController: UIViewController, ListExcelDataSource, Li
             case .value: rows.sort { asc ? $0.value < $1.value : $0.value > $1.value }
             default: return
         }
-        listView.reset(rows)
+        listView.reload { $0.rowDatas = rows }
         log("sorted by \(column.header.title)")
     }
 
