@@ -7,7 +7,9 @@
 
 import UIKit
 
+/// 列表底部栏：左侧操作按钮、中间可横滑附属视图（排序提示等）、右侧合计文案与状态指示器。
 public class ListExcelTotalView: UIView {
+    /// 底栏右侧状态指示（色点 + 文案，或自定义图）。
     public enum Indicator {
         case yellow(String)
         case red(String)
@@ -23,7 +25,7 @@ public class ListExcelTotalView: UIView {
             }
         }
 
-        /// 指示圆点填充色（保持不透明，避免回前台 / system tint 后几乎看不见）
+        /// 指示圆点填充色（保持不透明，避免回前台 / system tint 后几乎看不见）。
         public var color: UIColor {
             switch self {
                 case .yellow: return .softYellow
@@ -33,7 +35,7 @@ public class ListExcelTotalView: UIView {
             }
         }
 
-        /// Indicator 指示色与列表行高亮色在视觉上会略有差异，但可一一对应
+        /// 与列表行背景高亮对应的浅底色（供业务行背景对齐指示语义）。
         public static let yellowColor = UIColor.softYellow.withAlphaComponent(0.05)
         public static let redColor = UIColor.softRed.withAlphaComponent(0.05)
         public static let greenColor = UIColor.softGreen.withAlphaComponent(0.05)
@@ -50,9 +52,11 @@ public class ListExcelTotalView: UIView {
         setupAccessoryScrollView()
     }
 
+    /// 底栏内容相对左右边缘的内边距。
     public var padding: UIEdgeInsets = .init(0, 20)
 
-    /// 左侧 action 与右侧合计/指示器之间的中间区域；内容过长时可横向滑动。隐藏的 view 会跳过。
+    /// 左侧操作按钮与右侧合计/指示器之间的中间区域；内容过长时可横向滑动。隐藏的 view 会跳过。
+    /// `ListExcelView` 默认放入排序提示、清除按钮与 notice。
     public var leadingAccessoryViews: [UIView] = [] {
         didSet {
             for view in oldValue where !leadingAccessoryViews.contains(where: { $0 === view }) {
@@ -108,6 +112,7 @@ public class ListExcelTotalView: UIView {
         return view
     }()
 
+    /// 设置或替换左侧主操作按钮；返回该按钮便于宿主再调样式。
     @discardableResult
     public func resetActionButton(_ title: String, action: @escaping (UIButton) -> Void) -> UIButton {
         actionButton?.button.removeFromSuperview()
@@ -117,11 +122,13 @@ public class ListExcelTotalView: UIView {
         return button
     }
 
+    /// 替换右侧状态指示器列表；传空数组清空。
     public func resetIndicators(_ items: [Indicator] = []) {
         indicatorItems = items
         rebuildIndicatorButtons()
     }
 
+    /// 设置右侧合计文案；`nil` 隐藏合计 Label。
     public func resetTotalText(_ text: String?) {
         totalLabel.text = text
         totalLabel.isHidden = text == nil

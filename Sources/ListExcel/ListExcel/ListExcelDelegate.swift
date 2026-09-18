@@ -72,9 +72,11 @@ public protocol ListExcelInteractionDelegate<T>: NSObjectProtocol where T: Excel
     /// - Note: 若点中 `.select` 列，或 `selectionType == .rowSelection` 时点中行，列表会切换选中态并刷新，**不**再调用本方法。
     func listExcelView(_ excelView: ListExcelView<T>, didSelectRowAt row: Int, rowModel: Excel.RowModel, column: Int?, header: T?)
 
+    /// 表尾点击。
     func listExcelView(_ excelView: ListExcelView<T>, didSelectFooterAt header: T, column: Int)
 
     /// 排序变化；`column == nil` 表示已清除排序（如点「清除排序」）。
+    /// 若挂了 ``ListExcelCacheStore``，包已在回调前写回 `saveSortColumn`，宿主只需改查询并发请求。
     func listExcelView(_ excelView: ListExcelView<T>, didSortAt column: Excel.SortColumn<T>?)
 
     /// 多选集合变化；元素为行的 `ModelIdentifier.identifier`（无 id 的行不会进入集合）。
@@ -82,6 +84,13 @@ public protocol ListExcelInteractionDelegate<T>: NSObjectProtocol where T: Excel
 
     /// 触底加载。参数为 **下一页页码**（当前 `page + 1`），不是已加载完的页。宿主应请求该页并 `append`，再更新 `page` / `total`。
     func listExcelView(_ excelView: ListExcelView<T>, requestNext page: Int)
+
+    /// 表头长按已识别成功（手势进入 `.began`；后续 `.changed` / `.ended` 不会再回调）。
+    ///
+    /// 列表只负责识别并转发，不弹设置页、不改 `headers` / 锁列、不写 ``ListExcelCacheStore``。
+    /// 宿主可在此打开自定义表头 UI；保存到缓存后调用 `reload(readsCache: true)` 读回。
+    /// 默认空实现：长按无业务效果。
+    func listExcelView(_ excelView: ListExcelView<T>, didLongPressHeader gesture: UILongPressGestureRecognizer)
 }
 
 public extension ListExcelInteractionDelegate {
@@ -91,6 +100,7 @@ public extension ListExcelInteractionDelegate {
     func listExcelView(_ excelView: ListExcelView<T>, didSortAt column: Excel.SortColumn<T>?) { }
     func listExcelView(_ excelView: ListExcelView<T>, selectedRowsChanged identifiers: Set<String>) { }
     func listExcelView(_ excelView: ListExcelView<T>, requestNext page: Int) { }
+    func listExcelView(_ excelView: ListExcelView<T>, didLongPressHeader gesture: UILongPressGestureRecognizer) { }
 }
 
 /// 数据源 + Cell 处理 + 交互的组合别名；可只遵循子集协议。

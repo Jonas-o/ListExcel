@@ -19,6 +19,7 @@ extension Excel {
 }
 
 extension Excel {
+    /// 文本 / 数字格（`Content.text` / `.decimal` / `.decimals`）。
     open class TextCell: Cell {
         public let textLabel = DecimalLabel()
 
@@ -60,6 +61,7 @@ extension Excel {
         }
     }
 
+    /// 主文案 / 数字 + 左右角标（`Content.cornerText` / `.cornerDecimal`）。
     public class CornerTextCell: Cell {
         public let textLabel = DecimalLabel()
         public let leadingCornerLabel = DecimalLabel()
@@ -147,10 +149,12 @@ extension Excel {
         }
     }
 
+    /// 表头文本格；可展示排序箭头（`Content.text` 且列可排序时）。
     public class HeaderTextCell: Cell {
         public let textLabel = UILabel()
         private let sortImageView = UIImageView(image: UIImage.lex("lex_arrow_desc"))
 
+        /// 当前排序方向；非 `.none` 时显示排序图。
         public var orderType: Excel.OrderType = .none {
             didSet {
                 let image: UIImage?

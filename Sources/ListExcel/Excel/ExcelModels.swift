@@ -8,18 +8,22 @@
 import UIKit
 
 extension Excel {
-    /// 排序类型
+    /// 排序方向。表头循环点击默认从 ``default``（降序）开始。
     public enum OrderType: String, Codable {
+        /// 无排序 / 清除后的态（序列化空串）。
         case none = ""
-        /// 升序
+        /// 升序。
         case ascending = "ASC"
-        /// 降序
+        /// 降序。
         case descending = "DESC"
 
+        /// 首次点排序时使用的方向。
         public static var `default`: Self { .descending }
     }
 
+    /// 格子坐标：列下标 + 行（表头 / 表尾 / 内容行）。
     public struct Matrix {
+        /// 行类别。内容行用 `.cell(行下标)`，`rawValue ≥ 0`。
         public enum Row {
             case header
             case footer
@@ -47,12 +51,15 @@ extension Excel {
         }
     }
 
-    /// Cell 的点击效果, 不包括 header & footer
+    /// 内容区点击高亮形态（不含表头 / 表尾）。配置于 ``Excel/Configuration/selectionType``。
     public enum SelectionType {
+        /// 无高亮、不拦截为选中。
         case none
+        /// 仅高亮点中的单元格。
         case cell(UIColor = UIColor(red: 247 / 255, green: 247 / 255, blue: 247 / 255, alpha: 1))
+        /// 高亮整行；`ListExcelView` 仍可能把点击交给业务。
         case row(UIColor = UIColor(red: 247 / 255, green: 247 / 255, blue: 247 / 255, alpha: 1))
-        /// 接管所有的 row 点击
+        /// 整行点选由列表接管为多选切换（需行实现 ``RowSelection``）。
         case rowSelection(UIColor = UIColor(red: 247 / 255, green: 247 / 255, blue: 247 / 255, alpha: 1))
 
         public var color: UIColor? {
@@ -87,24 +94,25 @@ extension Excel {
 
     // MARK: - Header / Content
 
+    /// 列描述。`ListExcelView` 的泛型参数须遵循本协议。
     public protocol Header {
-        /// 表头文案
+        /// 表头默认文案（Delegate 未覆盖时）。
         var title: String { get }
-        /// 排序列的Key (仅 text 类型的 Content 才支持排序)
+        /// 排序键；非空且表头 Content 为 text 时，点击由表头排序接管。空串表示不可排序。
         var sortBy: String { get }
-        /// 是否有权限显示
+        /// 为 `false` 时该列不进入可见 `headers`。
         var hasPermission: Bool { get }
-        /// 列最小宽度
+        /// 列最小宽度；`nil` 不额外限制。
         var minWidth: CGFloat? { get }
-        /// 列最大宽度
+        /// 列最大宽度。
         var maxWidth: CGFloat { get }
-        /// 文案对齐方式
+        /// 文案对齐；绑定 Content 时可注入 Cell。
         var textAlignment: NSTextAlignment? { get }
-        /// 当前列的【行】内容（不包括表头）
+        /// 当前列在内容行的声明式 Content；返回 `nil` 时再问 Delegate。
         func content(for model: RowModel, row: Int) -> Content?
     }
 
-    /// 排序信息（以 `header.sortBy` 标识列；可见下标由当前 `headers` 反查）。
+    /// 当前排序（以 `header.sortBy` 标识列；可见下标由当前 `headers` 反查）。
     public struct SortColumn<T> where T: Excel.Header {
         public let header: T
         public let type: Excel.OrderType
@@ -115,12 +123,16 @@ extension Excel {
         }
     }
 
+    /// 内容行模型标记协议；具体字段由业务定义。
     public protocol RowModel {}
+    /// 提供稳定 id，供多选集合与列宽增量缓存关联。
     public protocol ModelIdentifier {
         var identifier: String { get }
     }
+    /// 可参与多选的行：同时是 ``RowModel`` 与 ``ModelIdentifier``。
     public typealias RowSelection = RowModel & ModelIdentifier
 
+    /// Delegate `contentAt` 的上下文：行列、列头与行模型。
     public struct CellUnion<T> where T: Excel.Header {
         public let row: Int
         public let column: Int
@@ -135,27 +147,30 @@ extension Excel {
         }
     }
 
+    /// 单元格展示内容；决定 dequeue 的 `ClassType` 与默认绑定。
     public enum Content {
         public typealias Tuple = DecimalLabel.DecimalTuple
         public typealias NumberStyle = DecimalLabel.NumberStyle
         public typealias IconStyle = Excel.IconTextCell.IconStyle
-        /// SelectCell
+        /// 多选勾选格（`SelectCell`）。
         case select
-        /// TextCell
+        /// 单值数字（`TextCell`）。
         case decimal(Decimal?, _ style: NumberStyle = .none, _ hiddenZero: Bool = false)
+        /// 多行数字（`TextCell`）。
         case decimals([Tuple])
-        /// TextCell or HeaderTextCell
+        /// 纯文本（`TextCell` 或表头 `HeaderTextCell`）。
         case text(String?)
-        /// ImageCell（图片内容由业务在 handleRow / handleHeader / handleFooter 中自行配置）
+        /// 图片格（`ImageCell`）；图片内容由业务在 `handle*` 中配置。
         case image
-        /// IconTextCell
+        /// 图标 + 文案（`IconTextCell`）。
         case iconText(IconStyle, String?)
-        /// TextFieldCell
+        /// 可编辑文本框（`TextFieldCell`）。
         case textField(String?)
-        /// CornerTextCell
+        /// 主文案 + 左右角标数字（`CornerTextCell`）。
         case cornerText(String?, leadingCorner: Tuple? = nil, trailingCorner: Tuple? = nil)
+        /// 主数字 + 左右角标（`CornerTextCell`）。
         case cornerDecimal(Decimal?, _ style: NumberStyle = .none, leadingCorner: Tuple? = nil, trailingCorner: Tuple? = nil)
-        /// CornerTextFieldCell
+        /// 可编辑主文案 + 左右角标（`CornerTextFieldCell`）。
         case cornerTextField(String?, leadingCorner: Tuple? = nil, trailingCorner: Tuple? = nil)
 
         var targetClassType: Excel.Cell.ClassType {
@@ -170,6 +185,7 @@ extension Excel {
             }
         }
 
+        /// 按字体与配置估算内容理想宽度；无法估算时返回 `nil`（由列宽策略兜底）。
         public func contentWidth(with font: UIFont, configuration: Excel.Configuration = .init()) -> CGFloat? {
             let horizontalPadding = configuration.cellPadding.horizontalValue
             let iconTitleSpacing = configuration.iconTitleSpacing
@@ -278,15 +294,15 @@ extension Excel {
 }
 
 public extension Excel.Header {
-    /// 排序列的Key
+    /// 默认不可排序。
     var sortBy: String { "" }
-    /// 是否有权限显示
+    /// 默认有权限。
     var hasPermission: Bool { true }
-    /// 列最小宽度
+    /// 默认不设最小宽。
     var minWidth: CGFloat? { nil }
-    /// 列最大宽度
+    /// 默认最大宽 300。
     var maxWidth: CGFloat { 300 }
-    /// 文案对齐方式
+    /// 默认由 Cell / Content 决定对齐。
     var textAlignment: NSTextAlignment? { nil }
     /// 默认不提供列内容，回退到 `ListExcelDelegate.contentAt`
     func content(for model: Excel.RowModel, row: Int) -> Excel.Content? { nil }
@@ -295,5 +311,6 @@ public extension Excel.Header {
 extension Excel.SortColumn: Codable where T: Codable {}
 
 public extension Excel.Header where Self: RawRepresentable, RawValue == String {
+    /// 默认用 `rawValue` 作为表头文案。
     var title: String { rawValue }
 }

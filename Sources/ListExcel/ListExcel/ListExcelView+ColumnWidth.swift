@@ -4,16 +4,32 @@
 //
 //  Copyright © 2026 ListExcel. All rights reserved.
 //
+//  列宽增量缓存：
+//  1. `contentWidthCache` — Content 量字（跨行复用相同文案）
+//  2. `rowColumnWidths` / `orphanRowContributions` — 每行对各列的贡献
+//  3. `headerColumnWidths` / `footerColumnWidths` — 表头 / 表尾贡献
+//  4. `recomputeWidthsFromRowContributions` — 取各列 max + clamp → 写 `widths`
+//
+//  写路径约定：
+//  - 换 headers / 测宽 metrics 变 → `invalidateWidthCache` 后全量重建
+//  - `reload` 只换 rows 且 metrics 未变 → `applyResetDiff`（指纹命中则复用行贡献）
+//  - `append` → 只 `measureRow` 新行（及冲突降级的旧行）再 `recompute`
+//  - 仅行高 / 放大变 → `recompute`（图列 preferred 跟 `resolvedRowHeight`），不清量字缓存
+//
 
 import UIKit
 
 extension ListExcelView {
+    /// 行级宽度贡献的字典键。
+    /// - `modelId`：实现了 `Excel.ModelIdentifier`；同 id 多行时不可用（见 `uniqueRowWidthKey`）。
+    /// - `objectId`：class 行模型的身份；struct / 无 id 走 orphan。
     enum RowWidthKey: Hashable {
         case modelId(String)
         case objectId(ObjectIdentifier)
     }
 
-    /// 量字缓存键；select / image / nil 不产生键、不写入缓存。
+    /// 量字缓存键。字段任一变化都应 miss，避免错误复用宽度。
+    /// `select` / `image` / `nil` Content 不产生键、不写入 `contentWidthCache`。
     struct ContentWidthKey: Hashable {
         let kind: String
         let payload: String
@@ -24,26 +40,27 @@ extension ListExcelView {
         let localeIdentifier: String
     }
 
+    /// `reloadData(immediate:widthPolicy:)` 的列宽策略。
     enum ColumnWidthPolicy {
-        /// 全量重测并写回 `widths`（可重建缓存）
+        /// 全量重测并写回 `widths`（可重建缓存）。
         case recalculate
-        /// 不重测，沿用当前 `widths`
+        /// 不重测，沿用当前 `widths`（长度与列数不一致时仍会全量重测）。
         case keep
-        /// 按行/表头表尾贡献再 `recompute`，不清空字典后盲算
+        /// 按已有行/表头表尾贡献再 `recompute`，不清空量字字典。
         case reconcile
     }
 }
 
 extension ListExcelView {
-    /// 兼容旧路径 / `ColumnWidthPolicy.recalculate`：全量测宽（走缓存结构）。
+    /// `ColumnWidthPolicy.recalculate`：测表头表尾 → 重建全部行贡献 → `recompute` 写 `widths`。
     func calculateColumnWidths() {
         measureHeaderFooter()
         rebuildAllRowWidthContributions()
         recomputeWidthsFromRowContributions()
     }
 
-    /// 单列重算（公开 `reloadCellWidth` 使用）。会更新该列表头/表尾缓存条目，并扫描全部行文案；
-    /// 不完整重建 `rowColumnWidths`，可能与行级增量缓存短暂不一致——需要严格一致时请 `reloadData()`。
+    /// 单列重算（公开 `reloadCellWidth`）。更新该列表头/表尾缓存条目，并扫描全部行文案取 max；
+    /// **不**完整重建 `rowColumnWidths`，可能与行级增量缓存短暂不一致——需严格一致时请 `reloadData()`。
     func calculateColumnWidth(_ column: Int) -> CGFloat {
         guard 0 ..< headers.count ~= column else { return 0 }
         let header = headers[column]
@@ -96,6 +113,8 @@ extension ListExcelView {
 }
 
 extension ListExcelView {
+    /// 推导行键：优先 `ModelIdentifier`，否则 class 用 `ObjectIdentifier`；纯 struct 返回 `nil`。
+    /// - Note: 不可对 `any RowModel` 直接 `as? AnyObject`（existential 盒子会误判为 class）。
     func rowWidthKey(for model: Excel.RowModel) -> RowWidthKey? {
         if let id = (model as? Excel.ModelIdentifier)?.identifier {
             return .modelId(id)
@@ -105,7 +124,8 @@ extension ListExcelView {
         return .objectId(ObjectIdentifier(model as AnyObject))
     }
 
-    /// 仅当 key 稳定且（对 modelId）全局唯一时可用于 `rowColumnWidths`。
+    /// 可用于 `rowColumnWidths` 的键：稳定，且 `modelId` 在当前表内全局唯一。
+    /// 同 id 多行返回 `nil`，调用方应写入 `orphanRowContributions`。
     func uniqueRowWidthKey(for model: Excel.RowModel) -> RowWidthKey? {
         guard let key = rowWidthKey(for: model) else { return nil }
         if case let .modelId(id) = key, modelIdCounts[id, default: 0] > 1 {
@@ -114,6 +134,7 @@ extension ListExcelView {
         return key
     }
 
+    /// 扫描 `rowDatas` 重建 `modelIdCounts`（append / reset diff / 全量重建前调用）。
     func rebuildModelIdCounts() {
         var counts: [String: Int] = [:]
         for row in rowDatas {
@@ -124,6 +145,7 @@ extension ListExcelView {
         modelIdCounts = counts
     }
 
+    /// 清空全部列宽缓存与 `widths`。换 headers 或测宽相关 configuration 变化时调用。
     func invalidateWidthCache() {
         contentWidthCache.removeAll()
         rowColumnWidths.removeAll()
@@ -134,6 +156,7 @@ extension ListExcelView {
         widths = []
     }
 
+    /// 由 Content + 字体生成量字键；不可缓存的类型返回 `nil`。
     func contentWidthKey(for content: Excel.Content?, font: UIFont) -> ContentWidthKey? {
         guard let content else { return nil }
         let excel = configuration.excel
@@ -199,6 +222,7 @@ extension ListExcelView {
         }
     }
 
+    /// `NumberStyle` 写入指纹用的短标记。
     private func styleToken(_ style: DecimalLabel.NumberStyle) -> String {
         switch style {
             case .none: return "none"
@@ -209,6 +233,7 @@ extension ListExcelView {
         }
     }
 
+    /// 查 / 写 `contentWidthCache`；无键时直接量字且不缓存（如 image 列走 `contentWidth` 兜底）。
     func cachedContentWidth(_ content: Excel.Content, font: UIFont) -> CGFloat? {
         guard let key = contentWidthKey(for: content, font: font) else {
             return content.contentWidth(with: font, configuration: configuration.excel)
@@ -223,6 +248,9 @@ extension ListExcelView {
         return width
     }
 
+    /// 测量一行对各列的贡献，并写入 `rowColumnWidths` 或 `orphanRowContributions`，同时更新指纹。
+    /// - Returns: 该行 `column → width` 贡献（不含 select / image）。
+    @discardableResult
     func measureRow(_ model: Excel.RowModel, index: Int) -> [Int: CGFloat] {
         var contrib: [Int: CGFloat] = [:]
         var fingerprints: [ContentWidthKey?] = []
@@ -253,6 +281,7 @@ extension ListExcelView {
         return contrib
     }
 
+    /// 重测表头各列贡献 → `headerColumnWidths`（可排序 text 头额外加 chrome）。
     func measureHeaderWidths() {
         var result: [Int: CGFloat] = [:]
         guard headerHeight > 0 else {
@@ -272,6 +301,7 @@ extension ListExcelView {
         headerColumnWidths = result
     }
 
+    /// 重测表尾各列贡献 → `footerColumnWidths`。
     func measureFooterWidths() {
         var result: [Int: CGFloat] = [:]
         guard footerHeight > 0 else {
@@ -290,6 +320,7 @@ extension ListExcelView {
         footerColumnWidths = result
     }
 
+    /// 表头 + 表尾一起重测。
     func measureHeaderFooter() {
         measureHeaderWidths()
         measureFooterWidths()
@@ -300,7 +331,7 @@ extension ListExcelView {
         configuration.resolvedRowHeight
     }
 
-    /// 任一内容行为 `.image` 即视为图列（首行命中则短路）。
+    /// 任一内容行为 `.image` 即视为图列（用于 `recompute` 注入 preferred 宽）。
     func columnContainsImage(_ column: Int) -> Bool {
         guard 0 ..< headers.count ~= column, !rowDatas.isEmpty else { return false }
         for index in rowDatas.indices {
@@ -311,6 +342,8 @@ extension ListExcelView {
         return false
     }
 
+    /// 汇总表头 / 表尾 / 行贡献 / 图列 preferred，按列取 max 后 clamp，写回 `widths`。
+    /// 不清 `contentWidthCache`；行贡献字典须已是当前数据的最新态。
     func recomputeWidthsFromRowContributions() {
         let columnCount = headers.count
         guard columnCount > 0 else {
@@ -340,7 +373,7 @@ extension ListExcelView {
         widths = next
     }
 
-    /// 全量重建行贡献（`reload { headers }` / `recalculate` / 冲突 orphan 重算等）。
+    /// 丢弃行级贡献后按当前 `rowDatas` 全量 `measureRow`（换 headers / recalculate 等）。
     func rebuildAllRowWidthContributions() {
         rebuildModelIdCounts()
         rowColumnWidths.removeAll()
@@ -351,6 +384,7 @@ extension ListExcelView {
         }
     }
 
+    /// 仅重建 orphan 行贡献（字典行不动）。用于冲突 id 降级后补测。
     func rebuildOrphanRowContributions() {
         orphanRowContributions.removeAll()
         for (index, model) in rowDatas.enumerated() {

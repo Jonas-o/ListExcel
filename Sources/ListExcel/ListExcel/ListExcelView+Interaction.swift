@@ -65,6 +65,7 @@ extension ListExcelView {
                 }
             }
             sortColumn = Excel.SortColumn(header: header, type: type)
+            cacheStore?.saveSortColumn(sortColumn)
             reloadHeader()
             didSortHeader()
             return
@@ -78,6 +79,7 @@ extension ListExcelView {
                 return
             }
             mutateConfiguration { $0.enlargeImageRows.toggle() }
+            cacheStore?.saveEnlargeImageRows(configuration.enlargeImageRows)
             return
         }
         switch content {
@@ -139,11 +141,43 @@ extension ListExcelView {
 
     // MARK: - Sort / Headers visibility
 
-    /// 清除排序
+    /// 清除当前排序：内存置空、写回 ``cacheStore``（若有）、刷新表头，并触发 ``ListExcelInteractionDelegate/listExcelView(_:didSortAt:)``（参数为 `nil`）。
     public func clearSorts() {
         sortColumn = nil
+        cacheStore?.saveSortColumn(nil)
         reloadHeader()
         didSortHeader()
+    }
+
+    func installHeaderLongPress() {
+        let target = ListExcelHeaderLongPressTarget { [weak self] gesture in
+            self?.handleHeaderLongPress(gesture)
+        }
+        headerLongPressTarget = target
+        let longPress = UILongPressGestureRecognizer(target: target, action: #selector(ListExcelHeaderLongPressTarget.handle(_:)))
+        longPress.minimumPressDuration = 0.5
+        headerView.addGestureRecognizer(longPress)
+    }
+
+    func handleHeaderLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+        delegate?.listExcelView(self, didLongPressHeader: gesture)
+    }
+
+    /// 得到「按当前缓存表头过滤后仍有效」的排序，供请求参数使用。
+    ///
+    /// - 已设置 ``cacheStore``：读取 store 的 `headers` / `sortColumn`，经 `hasPermission` 与 `customHeadersFilter` 投影后，
+    ///   按 `sortBy` 匹配；命中则返回可见列上的 header + 原 `type`，否则 `nil`。
+    /// - 未设置 store：返回当前内存 ``sortColumn``（已与界面可见列对齐）。
+    ///
+    /// 不修改 `headers` / `rowDatas` / `sortColumn`，不触发 `reload` 或布局。界面上的表头与排序提示仍须另一次 `reload(readsCache:)` 带上。
+    public func validatedSortColumn() -> Excel.SortColumn<T>? {
+        guard let cacheStore else { return sortColumn }
+        let visible = visibleHeaders(from: cacheStore.headers)
+        guard let sort = cacheStore.sortColumn else { return nil }
+        let key = sort.header.sortBy
+        guard !key.isEmpty, let header = visible.first(where: { !$0.sortBy.isEmpty && $0.sortBy == key }) else { return nil }
+        return Excel.SortColumn(header: header, type: sort.type)
     }
 
     /// `hasPermission` + `customHeadersFilter` 投影可见列，并校验当前排序是否仍有效。

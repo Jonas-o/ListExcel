@@ -8,7 +8,7 @@
 import UIKit
 
 extension ListExcelView {
-    /// 清除选择；尽量只刷新 select 列，不重算列宽。
+    /// 清空多选集合。尽量只刷新「选择」列可见格，不重算列宽。
     public func clearSelection() {
         selectRows.removeAll()
         if let column = selectColumnIndex() {
@@ -26,14 +26,17 @@ extension ListExcelView {
         }
     }
 
+    /// 是否已选中全部可标识行（`selectRows` 非空且数量 ≥ `rowDatas.count`）。
     public var isAllSelected: Bool {
         !selectRows.isEmpty && selectRows.count >= rowDatas.count
     }
 
+    /// 指定行模型（`Excel.RowSelection`）是否在多选集合中。
     public func isSelected(_ row: Excel.RowSelection) -> Bool {
         selectRows.contains(row.identifier)
     }
 
+    /// 按矩阵行判断选中态：表头表示「全选」；内容行须实现 `Excel.RowSelection`。
     public func isSelected(_ row: Excel.Matrix.Row) -> Bool {
         switch row {
             case .header:
@@ -47,10 +50,12 @@ extension ListExcelView {
         return false
     }
 
+    /// 将一行加入多选集合（按 `identifier`）。不自动刷新 Cell，请随后 `reloadCell` / 依赖内部点击路径。
     public func select(_ row: Excel.RowSelection) {
         selectRows.update(with: row.identifier)
     }
 
+    /// 按矩阵行选中：表头选中全部可标识行；内容行须实现 `Excel.RowSelection`。
     public func select(_ row: Excel.Matrix.Row) {
         switch row {
             case .header:
@@ -64,10 +69,12 @@ extension ListExcelView {
         }
     }
 
+    /// 从多选集合移除一行。
     public func deselect(_ row: Excel.RowSelection) {
         selectRows.remove(row.identifier)
     }
 
+    /// 按矩阵行取消选中：表头清空全部；内容行须实现 `Excel.RowSelection`。
     public func deselect(_ row: Excel.Matrix.Row) {
         switch row {
             case .header:

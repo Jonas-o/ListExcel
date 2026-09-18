@@ -8,7 +8,8 @@
 import UIKit
 
 extension ListExcelView {
-    /// 尾部追加；只测新行（并按需重测 footer）。换列 / 整表替换 / 改单行请用 `reload`。
+    /// 尾部追加行；只测新行（及因同 id 冲突降级的旧行），并按需重测 footer，再 `recompute`。
+    /// 换列 / 整表替换 / 改单行请用 ``reload(readsCache:_:)``。
     public func append(_ rows: [any Excel.RowModel]) {
         guard !rows.isEmpty else { return }
         let oldCount = rowDatas.count
@@ -57,6 +58,9 @@ extension ListExcelView {
         selectRows = selectRows.intersection(valid)
     }
 
+    /// `reload` 换行且测宽 metrics / headers 未变时的增量路径：
+    /// 指纹与旧贡献皆命中则复用 `rowColumnWidths`，否则对该行 `measureRow`。
+    /// 调用前假定即将整体替换 `rowDatas`；会刷新 `modelIdCounts` 并清空 orphan / 字典后按新表重填。
     func applyResetDiff(_ rows: [any Excel.RowModel]) {
         let oldFingerprints = rowContentFingerprints
         let oldContributions = rowColumnWidths
@@ -85,6 +89,7 @@ extension ListExcelView {
         }
     }
 
+    /// 当前行各列 Content 指纹（与 `measureRow` 写入 `rowContentFingerprints` 的规则一致）。
     private func rowFingerprint(for model: Excel.RowModel, index: Int) -> [ContentWidthKey?] {
         let font = configuration.excel.rowFont
         return headers.indices.map { column in
@@ -92,6 +97,7 @@ extension ListExcelView {
         }
     }
 
+    /// 同 id 多行时从 `rowColumnWidths` / 指纹字典摘掉该 id，迫使后续走 orphan。
     func demoteConflictingModelIdsFromDictionary() {
         for (id, count) in modelIdCounts where count > 1 {
             let key = RowWidthKey.modelId(id)

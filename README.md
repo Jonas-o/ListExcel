@@ -199,15 +199,17 @@ listView.isLoading = false
 
 日常改数据优先用写入 API。需要强制重测列宽并整表刷新时再调用无参 `reloadData()`。
 
-### `reload(_:)` 批量写入
+### `reload(readsCache:_:)` 批量写入
 
 一次提交配置与数据的子集变更，内部只对齐一次 UI。`Batch.configuration` / `Batch.sortColumn` 预填当前值且**始终写回**；`headers` / `rowDatas` / `total` / `page` / `isLoading` 为 Optional，**仅赋值时才写入**；`clearsSelection` 控制是否清空选中（默认 `false`，若同时写了 `rowDatas` 则按 id 裁剪保留）。
 
+挂了 `cacheStore` 时，`readsCache` 默认为 `true`：闭包没写的表头、排序、锁列，以及 `showsSortHint` / `supportsEnlargeImageRows` / `enlargeImageRows`，用 store 补上；闭包写过的字段优先。`readsCache: false` 这次不读 store。`mutateConfiguration` 固定不读 store。请求前要用缓存排序、但不想刷表时，读 `validatedSortColumn()`。表头长按在识别成功（`.began`）时回调 `didLongPressHeader`。
+
 ```swift
+listView.cacheStore = store
 listView.reload { batch in
     batch.configuration.excel.selectionType = .row()
     batch.rowDatas = nextPage
-    batch.sortColumn = cachedSort
     batch.total = totalCount
     batch.page = page
     batch.isLoading = false

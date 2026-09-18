@@ -8,8 +8,10 @@
 import UIKit
 
 extension Excel {
+    /// 可编辑文本格（`Content.textField`）；`Field` 须遵循 ``ExcelTextInput``。
     public class TextFieldCell<Field: ExcelTextInput>: Cell, ExcelTextFieldHosting {
         public typealias EditingAction = (TextFieldCell<Field>, Field, UIControl.Event) -> Void
+        /// 输入事件回调（begin / changed / end / endOnExit）。
         public var editingAction: EditingAction?
 
         public var inputTextField: UITextField { textField }
@@ -87,10 +89,13 @@ extension Excel {
         }
     }
 
+    /// 使用默认 ``ExcelTextField`` 的文本输入格。
     public typealias DefaultTextFieldCell = TextFieldCell<ExcelTextField>
 
+    /// 可编辑主文案 + 左右角标（`Content.cornerTextField`）。
     public class CornerTextFieldCell<Field: ExcelTextInput>: Cell, ExcelCornerTextFieldHosting {
         public typealias EditingAction = (CornerTextFieldCell<Field>, Field, UIControl.Event) -> Void
+        /// 输入事件回调（begin / changed / end / endOnExit）。
         public var editingAction: EditingAction?
 
         public var inputTextField: UITextField { textField }
@@ -214,5 +219,6 @@ extension Excel {
         }
     }
 
+    /// 使用默认 ``ExcelTextField`` 的角标输入格。
     public typealias DefaultCornerTextFieldCell = CornerTextFieldCell<ExcelTextField>
 }

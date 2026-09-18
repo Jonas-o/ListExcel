@@ -127,6 +127,7 @@ final class TestListHost: NSObject, ListExcelDataSource, ListExcelCellHandling, 
     var didSelectHeaders: [(TestHeader, Int)] = []
     var didSelectRows: [(Int, String?)] = []
     var didSelectFooters: [(TestHeader, Int)] = []
+    var longPressCount = 0
 
     func listExcelView(_ excelView: ListExcelView<TestHeader>, headerContentAt header: TestHeader, column: Int) -> Excel.Content? {
         if let override = headerOverrides[header] { return override }
@@ -166,6 +167,10 @@ final class TestListHost: NSObject, ListExcelDataSource, ListExcelCellHandling, 
 
     func listExcelView(_ excelView: ListExcelView<TestHeader>, didSelectFooterAt header: TestHeader, column: Int) {
         didSelectFooters.append((header, column))
+    }
+
+    func listExcelView(_ excelView: ListExcelView<TestHeader>, didLongPressHeader gesture: UILongPressGestureRecognizer) {
+        longPressCount += 1
     }
 }
 

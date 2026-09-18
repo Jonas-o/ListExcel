@@ -31,11 +31,13 @@ public protocol ExcelDelegate: NSObjectProtocol {
     /// 整行背景色（含 `.header` / `.footer` / `.cell`）；`nil` 为透明。
     func excel(_ excel: Excel, backgroundColorAt row: Excel.Matrix.Row) -> UIColor?
 
+    /// 表头点击。
     func excel(_ excel: Excel, didSelectHeaderAt column: Int)
 
     /// - Parameter column: 点中的列；整行点选（`selectionType` 为 row 系）时为 `nil`。
     func excel(_ excel: Excel, didSelectRowAt row: Excel.Matrix.Row, column: Int?)
 
+    /// 表尾点击。
     func excel(_ excel: Excel, didSelectFooterAt column: Int)
 
     // MARK: Scroll

@@ -7,8 +7,12 @@
 
 import UIKit
 
+/// 底层矩阵表格引擎（纵向 `UITableView` + 行内横向列）。`ListExcelView` 在其上封装业务列表。
+///
+/// 宿主若直接使用本类，须实现 ``ExcelDelegate``，并用 ``applyConfiguration`` / 各 `reload*` 驱动刷新。
 public class Excel: UIView {
     private let reusableCellIdentifier = "ExcelCell"
+    /// 纵向内容表；可设 `tableHeaderView` 等。
     public let contentView: UITableView = {
         let view = UITableView()
         view.backgroundColor = .white
@@ -55,7 +59,9 @@ public class Excel: UIView {
     public internal(set) var configuration: Configuration
 
     /// - Parameters:
-    ///   - cellClasses: 覆盖默认 `ClassType` → Cell 映射（仅初始化生效，之后不可改）
+    ///   - delegate: 行数 / 列宽 / Cell 配置与点击等。
+    ///   - configuration: 初始布局与外观。
+    ///   - cellClasses: 覆盖默认 `ClassType` → Cell 映射（仅初始化生效，之后不可改）。
     public init(delegate: any ExcelDelegate, configuration: Configuration = .init(), cellClasses: [Cell.ClassType: Cell.Type] = [:]) {
         self.delegate = delegate
         self.configuration = configuration
@@ -126,11 +132,13 @@ public class Excel: UIView {
         reloadFooterShadow()
     }
 
+    /// 将各行横向滚动偏移重置为 0。
     public func resetContentOffset() {
         currentOffset = 0
         visibleTableViewCell.forEach { $0.resetContentOffset(0) }
     }
-    
+
+    /// 重测行高 / 列宽并整表刷新。
     public func reloadData() {
         resetRowHeights()
         resetColumnWidths()
@@ -140,6 +148,7 @@ public class Excel: UIView {
         setNeedsLayout()
     }
 
+    /// 刷新表头行。
     public func reloadHeader() {
         headerCell.contentView.backgroundColor = delegate?.excel(self, backgroundColorAt: .header) ?? .clear
         headerCell.rowHeight = headerHeight
@@ -150,6 +159,7 @@ public class Excel: UIView {
         setNeedsLayout()
     }
 
+    /// 刷新表尾行。
     public func reloadFooter() {
         footerCell.contentView.backgroundColor = delegate?.excel(self, backgroundColorAt: .footer) ?? .clear
         footerCell.rowHeight = configuration.footerHeight
@@ -160,6 +170,7 @@ public class Excel: UIView {
         setNeedsLayout()
     }
 
+    /// 刷新指定格（仅内容，不改列宽）。
     public func reloadCell(at matrix: Excel.Matrix) {
         let cell: ExcelTableViewCell?
         switch matrix.row {
@@ -173,10 +184,12 @@ public class Excel: UIView {
         cell?.reloadCell(at: matrix.column)
     }
 
+    /// 刷新多格内容。
     public func reloadCells(at matrixs: [Excel.Matrix]) {
         matrixs.forEach { reloadCell(at: $0) }
     }
-    
+
+    /// 按 delegate 重取一列宽度并同步到可见行；可选随后滚到该列。
     public func reloadColumnWidth(_ column: Int, reason row: Excel.Matrix.Row? = nil) {
         let width = delegate?.excel(self, columnWidthAt: column) ?? 0
         columnWidths[column] = width
@@ -224,11 +237,13 @@ public class Excel: UIView {
         reloadFooterShadow()
     }
     
+    /// 横向滚到指定列。
     public func scrollToColumn(at column: Int, animated: Bool = true) {
         let cell = visibleTableViewCell.first
         cell?.scrollRectToVisible(at: column, animated: animated)
     }
-    
+
+    /// 滚到指定矩阵：横向对齐列；若为内容行则纵向对齐该行。
     public func scrollToMatrix(at matrix: Matrix, animated: Bool = true) {
         let cell = visibleTableViewCell.first
         cell?.scrollRectToVisible(at: matrix.column, animated: animated)
@@ -243,6 +258,7 @@ public class Excel: UIView {
         }
     }
 
+    /// 由可见 Cell 反查矩阵坐标。
     public func matrix(for cell: Excel.Cell) -> Matrix? {
         var matrix: Matrix?
         visibleTableViewCell.forEach {
@@ -252,6 +268,7 @@ public class Excel: UIView {
         return matrix
     }
 
+    /// 取指定矩阵上当前可见的 Cell。
     public func cellForMatrix(at matrix: Matrix) -> Excel.Cell? {
         let cell: ExcelTableViewCell?
         switch matrix.row {
@@ -265,13 +282,17 @@ public class Excel: UIView {
         return cell?.cellForColumn(at: matrix.column)
     }
     
+    /// 表头行视图。
     public var headerView: UIView { headerCell }
+    /// 表尾行视图。
     public var footerView: UIView { footerCell }
 
+    /// 当前可见的矩阵 Cell。
     public var visibleCells: [Excel.Cell] {
         visibleTableViewCell.flatMap { $0.visibleCells }
     }
 
+    /// 与 `visibleCells` 对应的矩阵坐标。
     public var matrixsForVisible: [Matrix] {
         visibleTableViewCell.compactMap { cell -> [Matrix]? in
             guard let row = cell.row else { return nil }

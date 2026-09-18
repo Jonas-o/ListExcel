@@ -8,7 +8,9 @@
 import UIKit
 
 extension Excel {
+    /// 图标 + 文案格（`Content.iconText`）。
     open class IconTextCell: Cell {
+        /// 内置图标或自定义图。
         public enum IconStyle {
             case delete
             case clear
@@ -23,6 +25,7 @@ extension Excel {
             }
         }
 
+        /// 图标相对文案的左右位置。
         public enum IconPosition {
             case leading
             case trailing
@@ -31,7 +34,7 @@ extension Excel {
         public let textLabel = UILabel()
         public let iconImageView = UIImageView()
 
-        /// icon 样式，默认 .delete
+        /// 图标样式，默认 `.delete`。
         public var style: IconStyle = .delete {
             didSet {
                 iconImageView.image = style.image
@@ -40,6 +43,7 @@ extension Excel {
         }
 
         /// icon 位置，默认 .leading
+        /// 图标相对文案的位置，默认左侧。
         public var iconPosition: IconPosition = .leading {
             didSet {
                 setNeedsLayout()
@@ -94,6 +98,7 @@ extension Excel {
         }
     }
 
+    /// 纯图片格（`Content.image`）；图片由业务在 `handle*` 中设置，不走 `cellPadding`。
     public class ImageCell: Cell {
         public let imageView = UIImageView()
 
@@ -111,6 +116,7 @@ extension Excel {
         }
     }
 
+    /// 多选勾选格（`Content.select`）。
     public class SelectCell: Cell {
         public enum SelectStyle {
             case square(_ isSelected: Bool)
@@ -128,6 +134,7 @@ extension Excel {
 
         private let imageView = UIImageView()
 
+        /// 勾选外观（方 / 圆 × 选中态）。
         public var style: SelectStyle = .square(false) {
             didSet {
                 imageView.image = style.image
