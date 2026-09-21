@@ -23,7 +23,7 @@
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Jonas-o/ListExcel.git", from: "0.1.0")
+    .package(url: "https://github.com/Jonas-o/ListExcel.git", from: "0.2.0")
 ]
 ```
 
