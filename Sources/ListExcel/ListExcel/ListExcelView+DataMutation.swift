@@ -18,7 +18,7 @@ extension ListExcelView {
         demoteConflictingModelIdsFromDictionary()
         // 因同 id 冲突从字典降级的旧行，补进 orphan
         for index in 0 ..< oldCount {
-            let model = rowDatas[index]
+            guard let model = rowDatas[safe: index] else { continue }
             if uniqueRowWidthKey(for: model) == nil {
                 _ = measureRow(model, index: index)
             }

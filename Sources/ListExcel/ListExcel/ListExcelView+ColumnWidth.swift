@@ -62,8 +62,7 @@ extension ListExcelView {
     /// 单列重算（公开 `reloadCellWidth`）。更新该列表头/表尾缓存条目，并扫描全部行文案取 max；
     /// **不**完整重建 `rowColumnWidths`，可能与行级增量缓存短暂不一致——需严格一致时请 `reloadData()`。
     func calculateColumnWidth(_ column: Int) -> CGFloat {
-        guard 0 ..< headers.count ~= column else { return 0 }
-        let header = headers[column]
+        guard let header = headers[safe: column] else { return 0 }
         var candidates: [CGFloat] = []
 
         if headerHeight > 0,
@@ -365,7 +364,7 @@ extension ListExcelView {
                 candidates.append(imageColumnPreferredWidth())
             }
             let computed = ceil(candidates.max() ?? 0)
-            let header = headers[column]
+            guard let header = headers[safe: column] else { continue }
             let limitMin = header.minWidth ?? 44
             let limitMax = header.maxWidth
             next[column] = min(max(computed, limitMin), limitMax)

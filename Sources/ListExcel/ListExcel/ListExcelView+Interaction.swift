@@ -11,8 +11,8 @@ extension ListExcelView {
     func excel(_ excel: Excel, didSelectRowAt row: Excel.Matrix.Row, column: Int?) {
         var header: T?
         var content: Excel.Content?
-        if let column, 0 ..< headers.count ~= column {
-            header = headers[column]
+        if let column, let resolved = headers[safe: column] {
+            header = resolved
             content = genContent(at: row, column: column)
         }
         var selectColumn: Int?
@@ -41,15 +41,13 @@ extension ListExcelView {
             return
         }
         let rowIndex = row.rawValue
-        if 0 ..< rowDatas.count ~= rowIndex {
-            let model = rowDatas[rowIndex]
+        if let model = rowDatas[safe: rowIndex] {
             didSelectRow(at: rowIndex, rowModel: model, column: column, header: header)
         }
     }
 
     func excel(_ excel: Excel, didSelectHeaderAt column: Int) {
-        guard 0 ..< headers.count ~= column else { return }
-        let header = headers[column]
+        guard let header = headers[safe: column] else { return }
         let content = genContent(at: .header, column: column)
         if !header.sortBy.isEmpty, content?.targetClassType == .text {
             // 接管「排序」逻辑
@@ -101,8 +99,7 @@ extension ListExcelView {
     }
 
     func excel(_ excel: Excel, didSelectFooterAt column: Int) {
-        guard 0 ..< headers.count ~= column else { return }
-        let header = headers[column]
+        guard let header = headers[safe: column] else { return }
         didSelectFooter(at: header, column: column)
     }
 

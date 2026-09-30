@@ -9,8 +9,7 @@ import UIKit
 
 extension ListExcelView {
     func excel(_ excel: Excel, columnWidthAt column: Int) -> CGFloat {
-        guard 0 ..< widths.count ~= column else { return 0 }
-        return widths[column]
+        widths[safe: column] ?? 0
     }
 
     func excel(_ excel: Excel, dequeueReusableCellAt matrix: Excel.Matrix) -> Excel.Cell.ClassType? {
@@ -22,8 +21,7 @@ extension ListExcelView {
     }
 
     func excel(_ excel: Excel, handle cell: some Excel.Cell, at matrix: Excel.Matrix) {
-        guard 0 ..< headers.count ~= matrix.column else { return }
-        let header = headers[matrix.column]
+        guard let header = headers[safe: matrix.column] else { return }
         let content = genContent(at: matrix.row, column: matrix.column)
         cell.bindContent(
             content,
@@ -53,11 +51,9 @@ extension ListExcelView {
                 }
             case .footer:
                 handleFooter(cell: cell, at: header, column: matrix.column)
-            case let .cell(index) where 0 ..< rowDatas.count ~= index:
-                let model = rowDatas[index]
+            case let .cell(index):
+                guard let model = rowDatas[safe: index] else { break }
                 handleRow(cell: cell, union: Excel.CellUnion(row: index, column: matrix.column, header: header, rowModel: model))
-            default:
-                break
         }
     }
 
@@ -65,12 +61,11 @@ extension ListExcelView {
         switch row {
             case .header:
                 return headerBackgroundColor() ?? configuration.excel.headerBackgroundColor
-            case let .cell(index) where 0 ..< rowDatas.count ~= index:
-                let model = rowDatas[index]
+            case let .cell(index):
+                guard let model = rowDatas[safe: index] else { return nil }
                 return backgroundColor(at: index, rowModel: model)
             case .footer:
                 return footerBackgroundColor()
-            default: return nil
         }
     }
 }
@@ -145,8 +140,7 @@ extension ListExcelView {
 extension ListExcelView {
     /// 解析单元格内容。优先级：`Header.content(for:)` → Delegate `contentAt` / header/footer 回调 → 默认表头 title / footerSumTitle。
     func genContent(at row: Excel.Matrix.Row, column: Int) -> Excel.Content? {
-        guard 0 ..< headers.count ~= column else { return nil }
-        let header = headers[column]
+        guard let header = headers[safe: column] else { return nil }
         switch row {
             case .header:
                 if let content = headerContent(at: header, column: column) {
@@ -156,17 +150,17 @@ extension ListExcelView {
                     return enlargeHeader
                 }
                 return .text(header.title)
-            case .footer where !rowDatas.isEmpty:
+            case .footer:
+                guard !rowDatas.isEmpty else { return nil }
                 let content = footerContent(at: header, column: column)
                 if content == nil, column == 0, let footerSumTitle = configuration.resolvedFooterSumTitle() {
                     // Footer的第一列显示汇总 title
                     return .text(footerSumTitle)
                 }
                 return content
-            case let .cell(index) where 0 ..< rowDatas.count ~= index:
-                let model = rowDatas[index]
+            case let .cell(index):
+                guard let model = rowDatas[safe: index] else { return nil }
                 return header.content(for: model, row: row.rawValue) ?? content(at: Excel.CellUnion(row: index, column: column, header: header, rowModel: model))
-            default: return nil
         }
     }
 

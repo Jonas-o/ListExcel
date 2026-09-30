@@ -41,13 +41,14 @@ extension ListExcelView {
         switch row {
             case .header:
                 return isAllSelected
-            case let .cell(index) where 0 ..< rowDatas.count ~= index:
-                if let model = rowDatas[index] as? Excel.RowSelection {
+            case let .cell(index):
+                if let model = rowDatas[safe: index] as? Excel.RowSelection {
                     return isSelected(model)
                 }
-            default: break
+                return false
+            case .footer:
+                return false
         }
-        return false
     }
 
     /// 将一行加入多选集合（按 `identifier`）。不自动刷新 Cell，请随后 `reloadCell` / 依赖内部点击路径。
@@ -61,11 +62,12 @@ extension ListExcelView {
             case .header:
                 let identifiers = rowDatas.compactMap { ($0 as? Excel.RowSelection)?.identifier }
                 selectRows = Set(identifiers)
-            case let .cell(index) where 0 ..< rowDatas.count ~= index:
-                if let model = rowDatas[index] as? Excel.RowSelection {
+            case let .cell(index):
+                if let model = rowDatas[safe: index] as? Excel.RowSelection {
                     select(model)
                 }
-            default: break
+            case .footer:
+                break
         }
     }
 
@@ -79,11 +81,12 @@ extension ListExcelView {
         switch row {
             case .header:
                 selectRows.removeAll()
-            case let .cell(index) where 0 ..< rowDatas.count ~= index:
-                if let model = rowDatas[index] as? Excel.RowSelection {
+            case let .cell(index):
+                if let model = rowDatas[safe: index] as? Excel.RowSelection {
                     deselect(model)
                 }
-            default: break
+            case .footer:
+                break
         }
     }
 }

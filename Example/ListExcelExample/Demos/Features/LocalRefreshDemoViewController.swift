@@ -112,9 +112,10 @@ final class LocalRefreshDemoViewController: UIViewController, ListExcelDataSourc
     }
 
     @objc private func reloadManyCells() {
-        guard listView.rowDatas.count > 2 else { return }
-        var r1 = listView.rowDatas[1] as! LocalRow
-        var r2 = listView.rowDatas[2] as! LocalRow
+        guard listView.rowDatas.count > 2,
+              var r1 = listView.rowDatas[safe: 1] as? LocalRow,
+              var r2 = listView.rowDatas[safe: 2] as? LocalRow
+        else { return }
         r1.b = "B*"
         r2.c = "C*"
         var rows = listView.rowDatas
